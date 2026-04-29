@@ -37,6 +37,40 @@
       padding: 16px 16px calc(100px + env(safe-area-inset-bottom, 0px));
     }
 
+    /* Month switcher */
+    .month-switcher {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+
+    .month-arrow {
+      background: var(--tg-theme-secondary-bg-color, #e5e5ea);
+      border: none;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--tg-theme-text-color, #000000);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .month-arrow:active { opacity: 0.5; }
+
+    .month-label {
+      font-size: 17px;
+      font-weight: 600;
+      text-align: center;
+      flex: 1;
+    }
+
     /* Period switcher */
     .period-switcher {
       display: flex;
@@ -196,6 +230,25 @@
       opacity: 0.85;
       transform: translateX(-50%) scale(0.96);
     }
+
+    .btn-to-current {
+      position: fixed;
+      bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--tg-theme-secondary-bg-color, #e5e5ea);
+      color: var(--tg-theme-text-color, #000000);
+      border: none;
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .btn-to-current:active { opacity: 0.6; }
 
     /* Overlay */
     .overlay {
@@ -438,6 +491,8 @@
       return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
     }
 
+    function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
     function fmtAmount(n) {
       return new Intl.NumberFormat('ru-RU').format(n);
     }
@@ -504,11 +559,13 @@
       const result = [];
 
       for (const e of expenses) {
-        const baseDay = parseDate(e.date).getDate();
+        const start = parseDate(e.date);
+        const baseDay = start.getDate();
         const end = e.endDate ? parseDate(e.endDate) : new Date(9999, 11, 31);
+        const rangeFrom = start > from ? start : from;
 
-        let occ = clampToMonth(from.getFullYear(), from.getMonth(), baseDay);
-        if (occ < from) occ = clampToMonth(from.getFullYear(), from.getMonth() + 1, baseDay);
+        let occ = clampToMonth(rangeFrom.getFullYear(), rangeFrom.getMonth(), baseDay);
+        if (occ < rangeFrom) occ = clampToMonth(rangeFrom.getFullYear(), rangeFrom.getMonth() + 1, baseDay);
 
         while (occ <= to && occ <= end) {
           result.push({ ...e, nextDate: toDateStr(occ) });
@@ -571,13 +628,28 @@
       );
     }
 
-    function TotalCard({ total, count, period }) {
+    function MonthSwitcher({ offset, onChange }) {
+      const t = today();
+      const sel = new Date(t.getFullYear(), t.getMonth() + offset, 1);
+      const sameYear = sel.getFullYear() === t.getFullYear();
+      const label = offset === 0 ? 'Текущий' : capitalize(sel.toLocaleDateString('ru-RU', {
+        month: 'long',
+        ...(!sameYear ? { year: 'numeric' } : {})
+      }));
+      return (
+        <div className="month-switcher">
+          <button className="month-arrow" onClick={() => onChange(offset - 1)}>‹</button>
+          <div className="month-label">{label}</div>
+          <button className="month-arrow" onClick={() => onChange(offset + 1)}>›</button>
+        </div>
+      );
+    }
+
+    function TotalCard({ total, count, label }) {
       const noun = count === 1 ? 'трата' : count < 5 ? 'траты' : 'трат';
       return (
         <div className="total-card">
-          <div className="total-label">
-            {period === 'week' ? 'На ближайшие 7 дней' : 'До конца месяца'}
-          </div>
+          <div className="total-label">{label}</div>
           <div className="total-row">
             <div className="total-amount">{fmtAmount(total)}</div>
             <div className="total-currency">₽</div>
@@ -690,6 +762,7 @@
                   value={date}
                   onChange={e => setDate(e.target.value)}
                 />
+                <div className="form-hint">Далее списывается в тот же день каждый месяц</div>
               </div>
               <div className="form-field">
                 <div className="form-label-row">
@@ -750,6 +823,10 @@
               </div>
               <div className="detail-rows">
                 <div className="detail-row">
+                  <span className="detail-row-label">Первый платёж</span>
+                  <span className="detail-row-value">{fmtDate(entry.date)}</span>
+                </div>
+                <div className="detail-row">
                   <span className="detail-row-label">Следующее списание</span>
                   <span className="detail-row-value">{fmtDate(entry.nextDate)}</span>
                 </div>
@@ -775,6 +852,7 @@
 
     function App() {
       const [period, setPeriod] = useState('week');
+      const [monthOffset, setMonthOffset] = useState(0);
       const [expenses, setExpenses] = useState([]);
       const [ready, setReady] = useState(false);
       const [showAdd, setShowAdd] = useState(false);
@@ -807,14 +885,28 @@
       if (!ready) return null;
 
       const t = today();
-      const to = period === 'week' ? addDays(t, 6) : endOfMonth(t);
-      const entries = getEntries(expenses, t, to);
+      let from, to, totalLabel;
+      if (period === 'week') {
+        from = t;
+        to = addDays(t, 6);
+        totalLabel = 'На ближайшие 7 дней';
+      } else {
+        const sel = new Date(t.getFullYear(), t.getMonth() + monthOffset, 1);
+        from = sel;
+        to = endOfMonth(sel);
+        const sameYear = sel.getFullYear() === t.getFullYear();
+        totalLabel = capitalize(sel.toLocaleDateString('ru-RU', {
+          month: 'long', ...(!sameYear ? { year: 'numeric' } : {})
+        }));
+      }
+      const entries = getEntries(expenses, from, to);
       const total = entries.reduce((s, e) => s + e.amount, 0);
 
       return (
         <div className="app">
-<PeriodSwitcher value={period} onChange={setPeriod} />
-          <TotalCard total={total} count={entries.length} period={period} />
+          <PeriodSwitcher value={period} onChange={p => { setPeriod(p); if (p === 'week') setMonthOffset(0); }} />
+          {period === 'month' && <MonthSwitcher offset={monthOffset} onChange={setMonthOffset} />}
+          <TotalCard total={total} count={entries.length} label={totalLabel} />
 
           {entries.length > 0 ? (
             <>
@@ -838,6 +930,11 @@
             </div>
           )}
 
+          {period === 'month' && monthOffset !== 0 && (
+            <button className="btn-to-current" onClick={() => setMonthOffset(0)}>
+              К текущему месяцу
+            </button>
+          )}
           <button className="fab" onClick={() => setShowAdd(true)}>
             + Добавить трату
           </button>
