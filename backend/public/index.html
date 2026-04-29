@@ -222,6 +222,7 @@
       overscroll-behavior: contain;
       animation: slide-up 0.28s cubic-bezier(0.32,0.72,0,1);
       padding-bottom: env(safe-area-inset-bottom, 16px);
+      transition: bottom 0.18s ease;
     }
 
     @keyframes slide-up {
@@ -515,6 +516,20 @@
 
     // ── Hooks ─────────────────────────────────────
 
+    function useKeyboardOffset(ref) {
+      useEffect(() => {
+        const vv = window.visualViewport;
+        if (!vv) return;
+        const update = () => {
+          if (!ref.current) return;
+          const offset = Math.max(0, window.innerHeight - vv.height);
+          ref.current.style.bottom = offset + 'px';
+        };
+        vv.addEventListener('resize', update);
+        return () => vv.removeEventListener('resize', update);
+      }, [ref]);
+    }
+
     function useSwipeDown(ref, onClose) {
       useEffect(() => {
         const el = ref.current;
@@ -609,6 +624,7 @@
       const sheetRef = useRef(null);
 
       useSwipeDown(sheetRef, onClose);
+      useKeyboardOffset(sheetRef);
 
       useEffect(() => {
         const w = tg();
