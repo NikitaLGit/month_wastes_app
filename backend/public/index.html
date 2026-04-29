@@ -495,6 +495,11 @@
 
     // ── Period logic ──────────────────────────────
 
+    function clampToMonth(year, month, day) {
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      return new Date(year, month, Math.min(day, lastDay));
+    }
+
     function getEntries(expenses, from, to) {
       const result = [];
 
@@ -502,12 +507,12 @@
         const baseDay = parseDate(e.date).getDate();
         const end = e.endDate ? parseDate(e.endDate) : new Date(9999, 11, 31);
 
-        let occ = new Date(from.getFullYear(), from.getMonth(), baseDay);
-        if (occ < from) occ = new Date(from.getFullYear(), from.getMonth() + 1, baseDay);
+        let occ = clampToMonth(from.getFullYear(), from.getMonth(), baseDay);
+        if (occ < from) occ = clampToMonth(from.getFullYear(), from.getMonth() + 1, baseDay);
 
         while (occ <= to && occ <= end) {
           result.push({ ...e, nextDate: toDateStr(occ) });
-          occ = new Date(occ.getFullYear(), occ.getMonth() + 1, baseDay);
+          occ = clampToMonth(occ.getFullYear(), occ.getMonth() + 1, baseDay);
         }
       }
 
@@ -518,15 +523,15 @@
 
     function useKeyboardOffset(ref) {
       useEffect(() => {
-        const vv = window.visualViewport;
-        if (!vv) return;
+        const w = tg();
+        if (!w?.onEvent) return;
         const update = () => {
           if (!ref.current) return;
-          const offset = Math.max(0, window.innerHeight - vv.height);
-          ref.current.style.bottom = offset + 'px';
+          const kbHeight = Math.max(0, w.viewportStableHeight - w.viewportHeight);
+          ref.current.style.bottom = kbHeight > 0 ? kbHeight + 'px' : '';
         };
-        vv.addEventListener('resize', update);
-        return () => vv.removeEventListener('resize', update);
+        w.onEvent('viewportChanged', update);
+        return () => w.offEvent('viewportChanged', update);
       }, [ref]);
     }
 
