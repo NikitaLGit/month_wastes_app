@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { today, addDays, endOfMonth, getEntries, capitalize } from './utils/dates';
 import { tg, cloudGet, cloudSet, STORAGE_KEY } from './utils/storage';
+import { fetchReminderIds, toggleReminder } from './utils/reminders';
 import PeriodSwitcher from './components/PeriodSwitcher';
 import MonthSwitcher from './components/MonthSwitcher';
 import TotalCard from './components/TotalCard';
@@ -19,6 +20,7 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
+  const [reminderIds, setReminderIds] = useState(new Set());
 
   useEffect(() => { tg()?.ready(); tg()?.expand(); }, []);
 
@@ -27,6 +29,7 @@ export default function App() {
       try { setExpenses(JSON.parse(raw) || []); } catch { setExpenses([]); }
       setReady(true);
     });
+    fetchReminderIds().then(ids => setReminderIds(new Set(ids)));
   }, []);
 
   useEffect(() => {
@@ -36,21 +39,55 @@ export default function App() {
 
   useEffect(() => { setFilterCategory(null); }, [period, monthOffset]);
 
-  const handleAdd = useCallback(expense => {
+  const handleAdd = useCallback((expense, hasReminder) => {
     tg()?.HapticFeedback?.selectionChanged();
     setExpenses(prev => [...prev, expense]);
     setShowAdd(false);
+    if (hasReminder) {
+      toggleReminder(expense, true).then(ok => {
+        if (ok) setReminderIds(prev => new Set([...prev, expense.id]));
+      });
+    }
   }, []);
 
   const handleDelete = useCallback(id => {
     setExpenses(prev => prev.filter(e => e.id !== id));
+    toggleReminder({ id }, false);
+    setReminderIds(prev => { const next = new Set(prev); next.delete(id); return next; });
   }, []);
 
-  const handleEdit = useCallback(updated => {
+  const handleEdit = useCallback((updated, hasReminder) => {
     tg()?.HapticFeedback?.selectionChanged();
     setExpenses(prev => prev.map(e => e.id === updated.id ? updated : e));
     setEditing(null);
+    setReminderIds(prev => {
+      const wasOn = prev.has(updated.id);
+      if (hasReminder === wasOn) return prev;
+      const next = new Set(prev);
+      hasReminder ? next.add(updated.id) : next.delete(updated.id);
+      toggleReminder(updated, hasReminder);
+      return next;
+    });
   }, []);
+
+  const handleToggleReminder = useCallback((entry) => {
+    const enabled = !reminderIds.has(entry.id);
+    tg()?.HapticFeedback?.selectionChanged();
+    setReminderIds(prev => {
+      const next = new Set(prev);
+      enabled ? next.add(entry.id) : next.delete(entry.id);
+      return next;
+    });
+    toggleReminder(entry, enabled).then(ok => {
+      if (!ok) {
+        setReminderIds(prev => {
+          const next = new Set(prev);
+          enabled ? next.delete(entry.id) : next.add(entry.id);
+          return next;
+        });
+      }
+    });
+  }, [reminderIds]);
 
   if (!ready) return null;
 
@@ -105,6 +142,7 @@ export default function App() {
                   key={entry.id + entry.nextDate}
                   entry={entry}
                   onClick={setSelected}
+                  hasReminder={reminderIds.has(entry.id)}
                 />
               ))}
             </div>
@@ -137,8 +175,10 @@ export default function App() {
       {selected && (
         <DetailSheet
           entry={selected}
+          hasReminder={reminderIds.has(selected.id)}
           onDelete={handleDelete}
           onEdit={e => { setEditing(e); setSelected(null); }}
+          onToggleReminder={() => handleToggleReminder(selected)}
           onClose={() => setSelected(null)}
         />
       )}
@@ -146,6 +186,7 @@ export default function App() {
       {editing && (
         <EditSheet
           expense={editing}
+          hasReminder={reminderIds.has(editing.id)}
           onEdit={handleEdit}
           onClose={() => setEditing(null)}
         />

@@ -2,11 +2,9 @@ import { useRef, useEffect } from 'react';
 import { fmtAmount, fmtDate, monthsLeft } from '../utils/dates';
 import { tg } from '../utils/storage';
 import { getCategoryById } from '../utils/categories';
-import { useSwipeDown } from '../hooks/useSwipeDown';
 
-export default function DetailSheet({ entry, onDelete, onEdit, onClose }) {
+export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onToggleReminder, onClose }) {
   const sheetRef = useRef(null);
-  useSwipeDown(sheetRef, onClose);
   const cat = entry.category ? getCategoryById(entry.category) : null;
 
   useEffect(() => {
@@ -49,12 +47,12 @@ export default function DetailSheet({ entry, onDelete, onEdit, onClose }) {
               </div>
             )}
             <div className="detail-row">
-              <span className="detail-row-label">Первый платёж</span>
-              <span className="detail-row-value">{fmtDate(entry.date)}</span>
-            </div>
-            <div className="detail-row">
               <span className="detail-row-label">Следующее списание</span>
               <span className="detail-row-value">{fmtDate(entry.nextDate)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-row-label">Первый платёж</span>
+              <span className="detail-row-value">{fmtDate(entry.date)}</span>
             </div>
             <div className="detail-row">
               <span className="detail-row-label">Последний платёж</span>
@@ -67,7 +65,16 @@ export default function DetailSheet({ entry, onDelete, onEdit, onClose }) {
               </div>
             )}
           </div>
-          <button className="btn-edit" onClick={() => { onEdit(entry); onClose(); }}>Редактировать</button>
+          <div className="detail-actions">
+            <button
+              className={'btn-bell' + (hasReminder ? ' btn-bell--on' : '')}
+              onClick={onToggleReminder}
+              aria-label="Напоминание"
+            >
+              {hasReminder ? '🔔' : '🔕'}
+            </button>
+            <button className="btn-edit" onClick={() => { onEdit(entry); onClose(); }}>Редактировать</button>
+          </div>
           <button className="btn-delete" onClick={handleDelete}>Удалить трату</button>
         </div>
       </div>

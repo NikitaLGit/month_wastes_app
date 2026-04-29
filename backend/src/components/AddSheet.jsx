@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { today, toDateStr, parseDate, genId } from '../utils/dates';
 import { tg } from '../utils/storage';
-import { useSwipeDown } from '../hooks/useSwipeDown';
 import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import Toggle from './Toggle';
 import CategoryPicker from './CategoryPicker';
@@ -11,11 +10,11 @@ export default function AddSheet({ onAdd, onClose }) {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(null);
   const [date, setDate] = useState(() => toDateStr(today()));
+  const [hasReminder, setHasReminder] = useState(false);
   const [hasEnd, setHasEnd] = useState(false);
   const [months, setMonths] = useState('');
   const sheetRef = useRef(null);
 
-  useSwipeDown(sheetRef, onClose);
   useKeyboardOffset(sheetRef);
 
   useEffect(() => {
@@ -35,7 +34,7 @@ export default function AddSheet({ onAdd, onClose }) {
       const base = parseDate(date);
       endDate = toDateStr(new Date(base.getFullYear(), base.getMonth() + Number(months) - 1, base.getDate()));
     }
-    onAdd({ id: genId(), name: name.trim(), amount: Number(amount), category: category ?? 'other', date, endDate });
+    onAdd({ id: genId(), name: name.trim(), amount: Number(amount), category: category ?? 'other', date, endDate }, hasReminder);
   };
 
   return (
@@ -83,7 +82,13 @@ export default function AddSheet({ onAdd, onClose }) {
             />
             <div className="form-hint">Далее списывается в тот же день каждый месяц</div>
           </div>
-          <div className="form-field">
+          <div className={'form-field form-field--toggle' + (hasReminder ? ' form-field--toggle-on' : '')}>
+            <div className="form-label-row">
+              <label className="form-label">Напоминание за 3 дня</label>
+              <Toggle checked={hasReminder} onChange={setHasReminder} />
+            </div>
+          </div>
+          <div className={'form-field form-field--toggle' + (hasEnd ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
               <label className="form-label">Ограниченное число платежей</label>
               <Toggle checked={hasEnd} onChange={setHasEnd} />

@@ -1,10 +1,11 @@
 import { daysUntil, dateCls, dateLabel, fmtAmount, monthsLeft } from '../utils/dates';
 import { getCategoryById } from '../utils/categories';
 
-export default function ExpenseItem({ entry, onClick }) {
+export default function ExpenseItem({ entry, onClick, hasReminder }) {
   const days = daysUntil(entry.nextDate);
   const daysText = days > 0 && days <= 30 ? ` · через ${days} дн.` : '';
   const cat = entry.category ? getCategoryById(entry.category) : null;
+
   return (
     <div className="expense-card" onClick={() => onClick(entry)}>
       <div className="expense-info">
@@ -26,6 +27,7 @@ export default function ExpenseItem({ entry, onClick }) {
         {entry.endDate && (
           <div className="expense-tag">↻ {monthsLeft(entry.endDate)} мес.</div>
         )}
+        {hasReminder && <div className="expense-bell-indicator">🔔</div>}
       </div>
     </div>
   );

@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { parseDate, toDateStr } from '../utils/dates';
 import { tg } from '../utils/storage';
-import { useSwipeDown } from '../hooks/useSwipeDown';
 import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import Toggle from './Toggle';
 import CategoryPicker from './CategoryPicker';
 
-export default function EditSheet({ expense, onEdit, onClose }) {
+export default function EditSheet({ expense, hasReminder: initialReminder, onEdit, onClose }) {
   const [name, setName] = useState(expense.name);
   const [amount, setAmount] = useState(String(expense.amount));
   const [category, setCategory] = useState(expense.category ?? null);
   const [date, setDate] = useState(expense.date);
+  const [hasReminder, setHasReminder] = useState(initialReminder);
   const [hasEnd, setHasEnd] = useState(!!expense.endDate);
   const [months, setMonths] = useState(() => {
     if (!expense.endDate) return '';
@@ -20,7 +20,6 @@ export default function EditSheet({ expense, onEdit, onClose }) {
   });
   const sheetRef = useRef(null);
 
-  useSwipeDown(sheetRef, onClose);
   useKeyboardOffset(sheetRef);
 
   useEffect(() => {
@@ -40,7 +39,7 @@ export default function EditSheet({ expense, onEdit, onClose }) {
       const base = parseDate(date);
       endDate = toDateStr(new Date(base.getFullYear(), base.getMonth() + Number(months) - 1, base.getDate()));
     }
-    onEdit({ ...expense, name: name.trim(), amount: Number(amount), category: category ?? 'other', date, endDate });
+    onEdit({ ...expense, name: name.trim(), amount: Number(amount), category: category ?? 'other', date, endDate }, hasReminder);
   };
 
   return (
@@ -87,7 +86,13 @@ export default function EditSheet({ expense, onEdit, onClose }) {
             />
             <div className="form-hint">Далее списывается в тот же день каждый месяц</div>
           </div>
-          <div className="form-field">
+          <div className={'form-field form-field--toggle' + (hasReminder ? ' form-field--toggle-on' : '')}>
+            <div className="form-label-row">
+              <label className="form-label">Напоминание за 3 дня</label>
+              <Toggle checked={hasReminder} onChange={setHasReminder} />
+            </div>
+          </div>
+          <div className={'form-field form-field--toggle' + (hasEnd ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
               <label className="form-label">Ограниченное число платежей</label>
               <Toggle checked={hasEnd} onChange={setHasEnd} />
