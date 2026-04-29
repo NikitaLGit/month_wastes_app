@@ -1,11 +1,13 @@
 import { useRef, useEffect } from 'react';
 import { fmtAmount, fmtDate, monthsLeft } from '../utils/dates';
 import { tg } from '../utils/storage';
+import { getCategoryById } from '../utils/categories';
 import { useSwipeDown } from '../hooks/useSwipeDown';
 
 export default function DetailSheet({ entry, onDelete, onEdit, onClose }) {
   const sheetRef = useRef(null);
   useSwipeDown(sheetRef, onClose);
+  const cat = entry.category ? getCategoryById(entry.category) : null;
 
   useEffect(() => {
     const w = tg();
@@ -35,6 +37,17 @@ export default function DetailSheet({ entry, onDelete, onEdit, onClose }) {
             {fmtAmount(entry.amount)}<span className="detail-currency"> ₽</span>
           </div>
           <div className="detail-rows">
+            {cat && (
+              <div className="detail-row">
+                <span className="detail-row-label">Категория</span>
+                <span
+                  className="expense-category"
+                  style={{ '--cat-color': cat.color, '--cat-bg': cat.bg }}
+                >
+                  {cat.label}
+                </span>
+              </div>
+            )}
             <div className="detail-row">
               <span className="detail-row-label">Первый платёж</span>
               <span className="detail-row-value">{fmtDate(entry.date)}</span>

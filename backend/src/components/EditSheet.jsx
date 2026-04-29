@@ -4,10 +4,12 @@ import { tg } from '../utils/storage';
 import { useSwipeDown } from '../hooks/useSwipeDown';
 import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import Toggle from './Toggle';
+import CategoryPicker from './CategoryPicker';
 
 export default function EditSheet({ expense, onEdit, onClose }) {
   const [name, setName] = useState(expense.name);
   const [amount, setAmount] = useState(String(expense.amount));
+  const [category, setCategory] = useState(expense.category ?? null);
   const [date, setDate] = useState(expense.date);
   const [hasEnd, setHasEnd] = useState(!!expense.endDate);
   const [months, setMonths] = useState(() => {
@@ -38,7 +40,7 @@ export default function EditSheet({ expense, onEdit, onClose }) {
       const base = parseDate(date);
       endDate = toDateStr(new Date(base.getFullYear(), base.getMonth() + Number(months) - 1, base.getDate()));
     }
-    onEdit({ ...expense, name: name.trim(), amount: Number(amount), date, endDate });
+    onEdit({ ...expense, name: name.trim(), amount: Number(amount), category: category ?? 'other', date, endDate });
   };
 
   return (
@@ -59,6 +61,10 @@ export default function EditSheet({ expense, onEdit, onClose }) {
               value={name}
               onChange={e => setName(e.target.value)}
             />
+          </div>
+          <div className="form-field">
+            <label className="form-label">Категория</label>
+            <CategoryPicker value={category} onChange={setCategory} />
           </div>
           <div className="form-field">
             <label className="form-label">Сумма, ₽</label>

@@ -4,10 +4,12 @@ import { tg } from '../utils/storage';
 import { useSwipeDown } from '../hooks/useSwipeDown';
 import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import Toggle from './Toggle';
+import CategoryPicker from './CategoryPicker';
 
 export default function AddSheet({ onAdd, onClose }) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState(null);
   const [date, setDate] = useState(() => toDateStr(today()));
   const [hasEnd, setHasEnd] = useState(false);
   const [months, setMonths] = useState('');
@@ -33,7 +35,7 @@ export default function AddSheet({ onAdd, onClose }) {
       const base = parseDate(date);
       endDate = toDateStr(new Date(base.getFullYear(), base.getMonth() + Number(months) - 1, base.getDate()));
     }
-    onAdd({ id: genId(), name: name.trim(), amount: Number(amount), date, endDate });
+    onAdd({ id: genId(), name: name.trim(), amount: Number(amount), category: category ?? 'other', date, endDate });
   };
 
   return (
@@ -55,6 +57,10 @@ export default function AddSheet({ onAdd, onClose }) {
               onChange={e => setName(e.target.value)}
               autoFocus
             />
+          </div>
+          <div className="form-field">
+            <label className="form-label">Категория</label>
+            <CategoryPicker value={category} onChange={setCategory} />
           </div>
           <div className="form-field">
             <label className="form-label">Сумма, ₽</label>
