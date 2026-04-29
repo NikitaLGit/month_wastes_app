@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Предстоящие траты</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --tg-theme-bg-color: #1c1c1e;
+        --tg-theme-secondary-bg-color: #2c2c2e;
+        --tg-theme-text-color: #ffffff;
+        --tg-theme-hint-color: #8e8e93;
+        --tg-theme-button-color: #0a84ff;
+        --tg-theme-button-text-color: #ffffff;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #f2f2f7);
+      color: var(--tg-theme-text-color, #000000);
+      min-height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px calc(100px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Period switcher */
+    .period-switcher {
+      display: flex;
+      background: var(--tg-theme-secondary-bg-color, #e5e5ea);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+
+    .period-btn {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      transition: all 0.15s;
+    }
+
+    .period-btn.active {
+      background: var(--tg-theme-bg-color, #ffffff);
+      color: var(--tg-theme-text-color, #000000);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+
+    /* Total card */
+    .total-card {
+      background: var(--tg-theme-button-color, #007aff);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .total-label {
+      font-size: 13px;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+
+    .total-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .total-amount {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .total-currency {
+      font-size: 22px;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+
+    .total-count {
+      font-size: 13px;
+      opacity: 0.75;
+      margin-top: 6px;
+    }
+
+    /* Section title */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* Expense list */
+    .expense-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .expense-card {
+      background: var(--tg-theme-secondary-bg-color, #ffffff);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+
+    .expense-card:active { opacity: 0.6; }
+
+    .expense-info { flex: 1; min-width: 0; }
+
+    .expense-name {
+      font-size: 16px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .expense-date {
+      font-size: 13px;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      margin-top: 3px;
+    }
+
+    .expense-date.soon { color: #ff9500; }
+    .expense-date.today { color: #ff3b30; font-weight: 500; }
+
+    .expense-right { text-align: right; flex-shrink: 0; }
+
+    .expense-amount { font-size: 17px; font-weight: 600; }
+
+    .expense-tag {
+      font-size: 11px;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      margin-top: 3px;
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--tg-theme-hint-color, #6c6c70);
+    }
+
+    .empty-emoji { font-size: 52px; margin-bottom: 14px; }
+    .empty-text { font-size: 15px; line-height: 1.6; }
+
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--tg-theme-button-color, #007aff);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      border: none;
+      border-radius: 26px;
+      padding: 15px 36px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,122,255,0.35);
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .fab:active {
+      opacity: 0.85;
+      transform: translateX(-50%) scale(0.96);
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      animation: fade-in 0.2s ease;
+    }
+
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Sheet */
+    .sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--tg-theme-bg-color, #ffffff);
+      border-radius: 22px 22px 0 0;
+      z-index: 101;
+      max-height: 92dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      animation: slide-up 0.28s cubic-bezier(0.32,0.72,0,1);
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    @keyframes slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--tg-theme-hint-color, #c7c7cc);
+      opacity: 0.5;
+      border-radius: 2px;
+      margin: 12px auto 4px;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px 4px;
+    }
+
+    .sheet-title { font-size: 18px; font-weight: 700; }
+
+    .sheet-close {
+      background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sheet-body { padding: 12px 20px 24px; }
+
+    /* Form */
+    .form-field { margin-bottom: 18px; }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 7px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 13px 14px;
+      background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      font-size: 16px;
+      color: var(--tg-theme-text-color, #000000);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .form-input:focus { border-color: var(--tg-theme-button-color, #007aff); }
+
+    .form-input::placeholder { color: var(--tg-theme-hint-color, #c7c7cc); }
+
+    .form-hint {
+      font-size: 12px;
+      color: var(--tg-theme-hint-color, #6c6c70);
+      margin-top: 5px;
+      padding-left: 2px;
+    }
+
+    .form-submit {
+      width: 100%;
+      padding: 15px;
+      background: var(--tg-theme-button-color, #007aff);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .form-submit:disabled { opacity: 0.4; cursor: default; }
+    .form-submit:not(:disabled):active { opacity: 0.85; }
+
+    /* Detail sheet */
+    .detail-amount {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      text-align: center;
+      padding: 16px 0 24px;
+    }
+
+    .detail-currency { font-size: 28px; font-weight: 500; opacity: 0.7; }
+
+    .detail-rows {
+      background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--tg-theme-bg-color, #ffffff);
+      font-size: 15px;
+    }
+
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row-label { color: var(--tg-theme-hint-color, #6c6c70); }
+    .detail-row-value { font-weight: 500; }
+
+    .btn-delete {
+      width: 100%;
+      padding: 15px;
+      background: transparent;
+      color: #ff3b30;
+      border: 1.5px solid #ff3b30;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-delete:active { opacity: 0.7; }
+
+    /* Toggle */
+    .form-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+    .form-label-row .form-label { margin-bottom: 0; }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--tg-theme-hint-color, #c7c7cc);
+      border-radius: 13px;
+      transition: background 0.2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--tg-theme-button-color, #007aff); }
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 22px;
+      height: 22px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    const tg = () => window.Telegram?.WebApp;
+    const STORAGE_KEY = 'wastes_v1';
+
+    // ── Date utils ────────────────────────────────
+
+    function parseDate(s) {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function toDateStr(d) {
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function today() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function addDays(d, n) {
+      const r = new Date(d);
+      r.setDate(r.getDate() + n);
+      return r;
+    }
+
+    function endOfMonth(d) {
+      return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    function fmtAmount(n) {
+      return new Intl.NumberFormat('ru-RU').format(n);
+    }
+
+    function fmtDate(s) {
+      return parseDate(s).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    }
+
+    function daysUntil(s) {
+      return Math.round((parseDate(s) - today()) / 86400000);
+    }
+
+    function dateLabel(s) {
+      const d = daysUntil(s);
+      if (d === 0) return 'Сегодня';
+      if (d === 1) return 'Завтра';
+      return fmtDate(s);
+    }
+
+    function dateCls(s) {
+      const d = daysUntil(s);
+      if (d <= 0) return 'today';
+      if (d <= 3) return 'soon';
+      return '';
+    }
+
+    function monthsLeft(endDateStr) {
+      const end = parseDate(endDateStr);
+      const now = today();
+      return Math.max(0, (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth()));
+    }
+
+    function genId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    // ── Storage ───────────────────────────────────
+
+    function cloudGet(key) {
+      return new Promise(resolve => {
+        const cs = tg()?.CloudStorage;
+        if (!cs) {
+          try { resolve(localStorage.getItem(key) || ''); } catch { resolve(''); }
+          return;
+        }
+        cs.getItem(key, (err, val) => resolve(err ? '' : (val || '')));
+      });
+    }
+
+    function cloudSet(key, value) {
+      const cs = tg()?.CloudStorage;
+      if (!cs) { try { localStorage.setItem(key, value); } catch {} return; }
+      cs.setItem(key, value, () => {});
+    }
+
+    // ── Period logic ──────────────────────────────
+
+    function getEntries(expenses, from, to) {
+      const result = [];
+
+      for (const e of expenses) {
+        const baseDay = parseDate(e.date).getDate();
+        const end = e.endDate ? parseDate(e.endDate) : new Date(9999, 11, 31);
+
+        let occ = new Date(from.getFullYear(), from.getMonth(), baseDay);
+        if (occ < from) occ = new Date(from.getFullYear(), from.getMonth() + 1, baseDay);
+
+        while (occ <= to && occ <= end) {
+          result.push({ ...e, nextDate: toDateStr(occ) });
+          occ = new Date(occ.getFullYear(), occ.getMonth() + 1, baseDay);
+        }
+      }
+
+      return result.sort((a, b) => a.nextDate.localeCompare(b.nextDate));
+    }
+
+    // ── Hooks ─────────────────────────────────────
+
+    function useSwipeDown(ref, onClose) {
+      useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        let startY = 0;
+        const onStart = e => { startY = e.touches[0].clientY; };
+        const onEnd = e => {
+          if (e.changedTouches[0].clientY - startY > 80) onClose();
+        };
+        el.addEventListener('touchstart', onStart, { passive: true });
+        el.addEventListener('touchend', onEnd, { passive: true });
+        return () => {
+          el.removeEventListener('touchstart', onStart);
+          el.removeEventListener('touchend', onEnd);
+        };
+      }, [ref, onClose]);
+    }
+
+    // ── Components ────────────────────────────────
+
+    function PeriodSwitcher({ value, onChange }) {
+      return (
+        <div className="period-switcher">
+          {['week', 'month'].map(p => (
+            <button
+              key={p}
+              className={'period-btn' + (value === p ? ' active' : '')}
+              onClick={() => onChange(p)}
+            >
+              {p === 'week' ? 'Неделя' : 'Месяц'}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    function TotalCard({ total, count, period }) {
+      const noun = count === 1 ? 'трата' : count < 5 ? 'траты' : 'трат';
+      return (
+        <div className="total-card">
+          <div className="total-label">
+            {period === 'week' ? 'На ближайшие 7 дней' : 'До конца месяца'}
+          </div>
+          <div className="total-row">
+            <div className="total-amount">{fmtAmount(total)}</div>
+            <div className="total-currency">₽</div>
+          </div>
+          <div className="total-count">
+            {count === 0 ? 'Нет трат' : `${count} ${noun}`}
+          </div>
+        </div>
+      );
+    }
+
+    function ExpenseItem({ entry, onClick }) {
+      const days = daysUntil(entry.nextDate);
+      const daysText = days > 0 && days <= 30 ? ` · через ${days} дн.` : '';
+      return (
+        <div className="expense-card" onClick={() => onClick(entry)}>
+          <div className="expense-info">
+            <div className="expense-name">{entry.name}</div>
+            <div className={'expense-date ' + dateCls(entry.nextDate)}>
+              {dateLabel(entry.nextDate)}{daysText}
+            </div>
+          </div>
+          <div className="expense-right">
+            <div className="expense-amount">{fmtAmount(entry.amount)} ₽</div>
+            {entry.endDate && (
+              <div className="expense-tag">↻ {monthsLeft(entry.endDate)} мес.</div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function Toggle({ checked, onChange }) {
+      return (
+        <label className="toggle">
+          <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+          <span className="toggle-track" />
+          <span className="toggle-thumb" />
+        </label>
+      );
+    }
+
+    function AddSheet({ onAdd, onClose }) {
+      const [name, setName] = useState('');
+      const [amount, setAmount] = useState('');
+      const [date, setDate] = useState(() => toDateStr(today()));
+      const [hasEnd, setHasEnd] = useState(false);
+      const [months, setMonths] = useState('');
+      const sheetRef = useRef(null);
+
+      useSwipeDown(sheetRef, onClose);
+
+      useEffect(() => {
+        const w = tg();
+        if (!w) return;
+        w.BackButton.show();
+        w.BackButton.onClick(onClose);
+        return () => { w.BackButton.hide(); w.BackButton.offClick(onClose); };
+      }, [onClose]);
+
+      const valid = name.trim() && Number(amount) > 0 && date && (!hasEnd || Number(months) > 0);
+
+      const handleSubmit = () => {
+        if (!valid) return;
+        let endDate = null;
+        if (hasEnd && Number(months) > 0) {
+          const base = parseDate(date);
+          endDate = toDateStr(new Date(base.getFullYear(), base.getMonth() + Number(months) - 1, base.getDate()));
+        }
+        onAdd({ id: genId(), name: name.trim(), amount: Number(amount), date, endDate });
+      };
+
+      return (
+        <>
+          <div className="overlay" onClick={onClose} />
+          <div className="sheet" ref={sheetRef}>
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <div className="sheet-title">Новая трата</div>
+              <button className="sheet-close" onClick={onClose}>✕</button>
+            </div>
+            <div className="sheet-body">
+              <div className="form-field">
+                <label className="form-label">Название</label>
+                <input
+                  className="form-input"
+                  placeholder="Аренда, кредит, подписка…"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Сумма, ₽</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+              <div className="form-field">
+                <label className="form-label">День списания</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <div className="form-label-row">
+                  <label className="form-label">Ограниченное число платежей</label>
+                  <Toggle checked={hasEnd} onChange={setHasEnd} />
+                </div>
+                {hasEnd && (
+                  <input
+                    className="form-input"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Количество месяцев"
+                    value={months}
+                    onChange={e => setMonths(e.target.value.replace(/\D/g, ''))}
+                    autoFocus
+                  />
+                )}
+              </div>
+              <button className="form-submit" disabled={!valid} onClick={handleSubmit}>
+                Добавить
+              </button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    function DetailSheet({ entry, onDelete, onClose }) {
+      const sheetRef = useRef(null);
+      useSwipeDown(sheetRef, onClose);
+
+      useEffect(() => {
+        const w = tg();
+        if (!w) return;
+        w.BackButton.show();
+        w.BackButton.onClick(onClose);
+        return () => { w.BackButton.hide(); w.BackButton.offClick(onClose); };
+      }, [onClose]);
+
+      const handleDelete = () => {
+        tg()?.HapticFeedback?.notificationOccurred('warning');
+        onDelete(entry.id);
+        onClose();
+      };
+
+      return (
+        <>
+          <div className="overlay" onClick={onClose} />
+          <div className="sheet" ref={sheetRef}>
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <div className="sheet-title">{entry.name}</div>
+              <button className="sheet-close" onClick={onClose}>✕</button>
+            </div>
+            <div className="sheet-body">
+              <div className="detail-amount">
+                {fmtAmount(entry.amount)}<span className="detail-currency"> ₽</span>
+              </div>
+              <div className="detail-rows">
+                <div className="detail-row">
+                  <span className="detail-row-label">Следующее списание</span>
+                  <span className="detail-row-value">{fmtDate(entry.nextDate)}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-row-label">Последний платёж</span>
+                  <span className="detail-row-value">{entry.endDate ? fmtDate(entry.endDate) : 'Бессрочно'}</span>
+                </div>
+                {entry.endDate && (
+                  <div className="detail-row">
+                    <span className="detail-row-label">Осталось платежей</span>
+                    <span className="detail-row-value">{monthsLeft(entry.endDate)} мес.</span>
+                  </div>
+                )}
+              </div>
+              <button className="btn-delete" onClick={handleDelete}>Удалить трату</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // ── App ───────────────────────────────────────
+
+    function App() {
+      const [period, setPeriod] = useState('week');
+      const [expenses, setExpenses] = useState([]);
+      const [ready, setReady] = useState(false);
+      const [showAdd, setShowAdd] = useState(false);
+      const [selected, setSelected] = useState(null);
+
+      useEffect(() => { tg()?.ready(); tg()?.expand(); }, []);
+
+      useEffect(() => {
+        cloudGet(STORAGE_KEY).then(raw => {
+          try { setExpenses(JSON.parse(raw) || []); } catch { setExpenses([]); }
+          setReady(true);
+        });
+      }, []);
+
+      useEffect(() => {
+        if (!ready) return;
+        cloudSet(STORAGE_KEY, JSON.stringify(expenses));
+      }, [expenses, ready]);
+
+      const handleAdd = useCallback(expense => {
+        tg()?.HapticFeedback?.selectionChanged();
+        setExpenses(prev => [...prev, expense]);
+        setShowAdd(false);
+      }, []);
+
+      const handleDelete = useCallback(id => {
+        setExpenses(prev => prev.filter(e => e.id !== id));
+      }, []);
+
+      if (!ready) return null;
+
+      const t = today();
+      const to = period === 'week' ? addDays(t, 6) : endOfMonth(t);
+      const entries = getEntries(expenses, t, to);
+      const total = entries.reduce((s, e) => s + e.amount, 0);
+
+      return (
+        <div className="app">
+<PeriodSwitcher value={period} onChange={setPeriod} />
+          <TotalCard total={total} count={entries.length} period={period} />
+
+          {entries.length > 0 ? (
+            <>
+              <div className="section-title">Предстоящие</div>
+              <div className="expense-list">
+                {entries.map(entry => (
+                  <ExpenseItem
+                    key={entry.id + entry.nextDate}
+                    entry={entry}
+                    onClick={setSelected}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="empty">
+              <div className="empty-emoji">💸</div>
+              <div className="empty-text">
+                Нет обязательных трат<br />на этот период
+              </div>
+            </div>
+          )}
+
+          <button className="fab" onClick={() => setShowAdd(true)}>
+            + Добавить трату
+          </button>
+
+          {showAdd && (
+            <AddSheet onAdd={handleAdd} onClose={() => setShowAdd(false)} />
+          )}
+
+          {selected && (
+            <DetailSheet
+              entry={selected}
+              onDelete={handleDelete}
+              onClose={() => setSelected(null)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
