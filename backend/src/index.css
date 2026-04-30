@@ -181,7 +181,13 @@ body {
 
 .expense-card:active { opacity: 0.6; }
 
-.expense-info { flex: 1; min-width: 0; }
+.expense-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 
 .expense-name {
   font-size: 16px;
@@ -189,6 +195,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
 }
 
 .expense-category {

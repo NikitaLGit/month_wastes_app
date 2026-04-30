@@ -135,7 +135,7 @@ export default function App() {
     totalLabel = 'На ближайшие 7 дней';
   } else {
     const sel = new Date(t.getFullYear(), t.getMonth() + monthOffset, 1);
-    from = sel;
+    from = monthOffset === 0 ? t : sel;
     to = endOfMonth(sel);
     const sameYear = sel.getFullYear() === t.getFullYear();
     totalLabel = capitalize(sel.toLocaleDateString('ru-RU', {
