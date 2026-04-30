@@ -141,13 +141,11 @@ export default function App() {
         {entries.length > 0 && (
           <div className="filter-sort-row">
             {showFilter && (
-              <div className="filter-pills-wrap">
-                <CategoryFilter
-                  active={filterCategory}
-                  onChange={setFilterCategory}
-                  availableIds={activeCategoryIds}
-                />
-              </div>
+              <CategoryFilter
+                active={filterCategory}
+                onChange={setFilterCategory}
+                availableIds={activeCategoryIds}
+              />
             )}
             <SortPicker value={sortBy} onChange={setSortBy} />
           </div>
