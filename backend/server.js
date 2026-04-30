@@ -22,9 +22,11 @@ async function initDb() {
       expense_name TEXT NOT NULL,
       amount INTEGER NOT NULL,
       day_of_month INTEGER NOT NULL,
+      days_before INTEGER NOT NULL DEFAULT 3,
       PRIMARY KEY (user_id, expense_id)
     )
   `);
+  await pool.query(`ALTER TABLE reminders ADD COLUMN IF NOT EXISTS days_before INTEGER NOT NULL DEFAULT 3`);
 }
 
 function validateInitData(initData) {
@@ -45,20 +47,20 @@ function validateInitData(initData) {
 
 app.post('/api/reminder', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'DB not configured' });
-  const { initData, expenseId, expenseName, amount, dayOfMonth, enabled } = req.body;
+  const { initData, expenseId, expenseName, amount, dayOfMonth, enabled, daysBeforePayment = 3 } = req.body;
   const user = validateInitData(initData);
   if (!user) return res.status(403).json({ error: 'Invalid initData' });
   try {
     if (enabled) {
       await pool.query(
-        `INSERT INTO reminders (user_id, expense_id, expense_name, amount, day_of_month)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO reminders (user_id, expense_id, expense_name, amount, day_of_month, days_before)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (user_id, expense_id) DO UPDATE
-         SET expense_name = $3, amount = $4, day_of_month = $5`,
-        [user.id, expenseId, expenseName, amount, dayOfMonth]
+         SET expense_name = $3, amount = $4, day_of_month = $5, days_before = $6`,
+        [user.id, expenseId, expenseName, amount, dayOfMonth, daysBeforePayment]
       );
       const days = daysUntilDayOfMonth(dayOfMonth);
-      if (days <= 3) {
+      if (days <= daysBeforePayment) {
         await sendReminderMessage(user.id, expenseName, amount, days);
       }
     } else {
@@ -67,6 +69,23 @@ app.post('/api/reminder', async (req, res) => {
         [user.id, expenseId]
       );
     }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+app.post('/api/settings', async (req, res) => {
+  if (!pool) return res.json({ ok: true });
+  const { initData, daysBeforePayment } = req.body;
+  const user = validateInitData(initData);
+  if (!user) return res.status(403).json({ error: 'Invalid initData' });
+  try {
+    await pool.query(
+      'UPDATE reminders SET days_before = $1 WHERE user_id = $2',
+      [daysBeforePayment, user.id]
+    );
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -118,16 +137,15 @@ async function sendReminderMessage(userId, expenseName, amount, daysLeft) {
 
 async function sendReminders() {
   if (!pool || !BOT_TOKEN) return;
-  const target = new Date();
-  target.setDate(target.getDate() + 3);
-  const targetDay = target.getDate();
+  const today = new Date();
   try {
-    const { rows } = await pool.query(
-      'SELECT * FROM reminders WHERE day_of_month = $1',
-      [targetDay]
-    );
+    const { rows } = await pool.query('SELECT * FROM reminders');
     for (const row of rows) {
-      await sendReminderMessage(row.user_id, row.expense_name, row.amount, 3);
+      const target = new Date(today);
+      target.setDate(today.getDate() + row.days_before);
+      if (target.getDate() === row.day_of_month) {
+        await sendReminderMessage(row.user_id, row.expense_name, row.amount, row.days_before);
+      }
     }
   } catch (err) {
     console.error('Cron error:', err);

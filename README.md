@@ -11,10 +11,10 @@ Mini App: `https://t.me/monthwasteslns_bot`
 | Слой | Технология |
 |------|-----------|
 | Frontend | React 18 + Vite + vite-plugin-singlefile |
-| Хранилище | Telegram CloudStorage (`wastes_v1`), fallback localStorage |
+| Хранилище | Telegram CloudStorage (`wastes_v1`, `wastes_settings_v1`), fallback localStorage |
 | Backend | Express (статика + REST API) |
 | БД | PostgreSQL (напоминания) |
-| Cron | node-cron (ежедневная рассылка в 9:00) |
+| Cron | node-cron (9:00 Europe/Moscow, per-row `days_before`) |
 | Deploy | Docker multi-stage → nginx reverse proxy |
 
 ---
@@ -26,9 +26,10 @@ Mini App: `https://t.me/monthwasteslns_bot`
 - **Категории:** 8 штук (Жильё / Кредиты / Подписки / Транспорт / Здоровье / Связь / Образование / Прочее) с цветными бейджами
 - **Фильтр по категории:** появляется автоматически при 2+ разных категориях в периоде
 - **Ограниченные траты:** опциональный `endDate`, показывает "осталось N мес."
-- **Напоминания:** бот пишет в Telegram за 3 дня до списания; включается/выключается в карточке траты
-- **Детальная карточка:** все поля, ссылки на даты, инлайн-тогл напоминания
-- **iOS-bottom sheets:** добавление, редактирование, детали — анимированные снизу
+- **Напоминания:** бот пишет в Telegram за N дней до списания; тогл в карточке траты и в формах добавления/редактирования; при включении в пределах окна — уведомление приходит сразу
+- **Настройки:** кнопка ⚙ в футере, настройка количества дней напоминания (1–14), сохраняется в CloudStorage и обновляет все записи в БД
+- **Детальная карточка:** все поля, инлайн-тогл напоминания, кнопки редактирования и удаления
+- **iOS-bottom sheets:** добавление, редактирование, детали, настройки — анимированные снизу
 - **Telegram UX:** BackButton, HapticFeedback, expand(), safe-area insets, dark mode
 
 ---
@@ -40,19 +41,19 @@ month_wastes_miniapp/
 ├── backend/
 │   ├── index.html              # Vite entry
 │   ├── vite.config.js          # vite-plugin-singlefile, outDir: dist
-│   ├── package.json
-│   ├── server.js               # Express: статика + /api/reminder + /api/reminders + cron
-│   ├── Dockerfile              # multi-stage: builder (vite build) + runtime (express)
+│   ├── package.json            # react + react-dom + vite + express + pg + node-cron
+│   ├── server.js               # Express: статика + API + cron 9:00 Moscow
+│   ├── Dockerfile              # multi-stage: builder (vite build) + runtime
 │   ├── .env.example            # PORT, BOT_TOKEN, DATABASE_URL
 │   └── src/
 │       ├── main.jsx
-│       ├── App.jsx             # весь state: expenses, reminderIds, sheets
+│       ├── App.jsx             # весь state: expenses, reminderIds, reminderDays, sheets
 │       ├── index.css           # все стили, один файл
 │       ├── utils/
 │       │   ├── dates.js        # date utils, getEntries, fmtAmount/fmtDate
-│       │   ├── storage.js      # tg(), cloudGet/cloudSet, STORAGE_KEY
+│       │   ├── storage.js      # tg(), cloudGet/cloudSet, STORAGE_KEY, SETTINGS_KEY
 │       │   ├── categories.js   # CATEGORIES[], getCategoryById()
-│       │   └── reminders.js    # fetchReminderIds(), toggleReminder()
+│       │   └── reminders.js    # fetchReminderIds(), toggleReminder(), saveReminderSettings()
 │       ├── hooks/
 │       │   ├── useSwipeDown.js
 │       │   └── useKeyboardOffset.js
@@ -66,10 +67,24 @@ month_wastes_miniapp/
 │           ├── CategoryFilter.jsx
 │           ├── AddSheet.jsx
 │           ├── EditSheet.jsx
-│           └── DetailSheet.jsx
+│           ├── DetailSheet.jsx
+│           └── SettingsSheet.jsx
 ├── docker-compose.yml
-└── setup_bot.js
+├── setup_bot.js
+└── prompt.md
 ```
+
+---
+
+## API endpoints
+
+| Метод | Путь | Описание |
+|-------|------|---------|
+| POST | `/api/reminder` | Включить/выключить напоминание для траты |
+| GET | `/api/reminders` | Получить список id активных напоминаний пользователя |
+| POST | `/api/settings` | Обновить `days_before` для всех напоминаний пользователя |
+
+Все запросы валидируются через `initData` (HMAC-SHA256 подпись Telegram).
 
 ---
 
@@ -88,11 +103,13 @@ CloudStorage, ключ `wastes_v1`:
 }]
 ```
 
-- `date` — первый платёж; далее ежемесячно в тот же день
-- Если числа нет в месяце — переносится на последний день
-- `endDate: null` → бессрочно; `endDate: "YYYY-MM-DD"` → последний платёж
+CloudStorage, ключ `wastes_settings_v1`:
 
-Напоминания хранятся в PostgreSQL (таблица `reminders`):
+```json
+{ "reminderDays": 5 }
+```
+
+PostgreSQL, таблица `reminders`:
 
 ```sql
 CREATE TABLE reminders (
@@ -101,24 +118,25 @@ CREATE TABLE reminders (
   expense_name TEXT    NOT NULL,
   amount       INTEGER NOT NULL,
   day_of_month INTEGER NOT NULL,
+  days_before  INTEGER NOT NULL DEFAULT 3,
   PRIMARY KEY (user_id, expense_id)
 );
 ```
+
+Cron `0 9 * * *` (Europe/Moscow) — для каждой строки проверяет `today + days_before == day_of_month`.
 
 ---
 
 ## Сборка и деплой
 
 ```bash
-# Скопировать и заполнить .env
 cp backend/.env.example backend/.env
+# заполнить BOT_TOKEN, DATABASE_URL
 
-# Собрать и поднять (Vite билдит внутри Docker)
 docker compose up -d --build
-
 ```
 
-vite-plugin-singlefile инлайнит весь JS и CSS в один `dist/index.html` — нет отдельных asset-файлов, нет проблем с base path.
+vite-plugin-singlefile инлайнит всё в один `dist/index.html`. nginx проксирует `/wastes/` → Express, API доступен на `/wastes/api/...`.
 
 ---
 
@@ -127,5 +145,5 @@ vite-plugin-singlefile инлайнит весь JS и CSS в один `dist/ind
 | Переменная | Описание |
 |-----------|---------|
 | `PORT` | Порт Express (default 3003) |
-| `BOT_TOKEN` | Токен Telegram-бота (для валидации initData и рассылки) |
-| `DATABASE_URL` | PostgreSQL connection string (напоминания; опционально — без БД фича отключается) |
+| `BOT_TOKEN` | Токен Telegram-бота (валидация initData + рассылка) |
+| `DATABASE_URL` | PostgreSQL connection string; без него напоминания отключены |

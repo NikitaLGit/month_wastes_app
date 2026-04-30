@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { today, addDays, endOfMonth, getEntries, capitalize } from './utils/dates';
-import { tg, cloudGet, cloudSet, STORAGE_KEY } from './utils/storage';
-import { fetchReminderIds, toggleReminder } from './utils/reminders';
+import { tg, cloudGet, cloudSet, STORAGE_KEY, SETTINGS_KEY } from './utils/storage';
+import { fetchReminderIds, toggleReminder, saveReminderSettings } from './utils/reminders';
 import PeriodSwitcher from './components/PeriodSwitcher';
 import MonthSwitcher from './components/MonthSwitcher';
 import TotalCard from './components/TotalCard';
@@ -10,6 +10,7 @@ import CategoryFilter from './components/CategoryFilter';
 import AddSheet from './components/AddSheet';
 import EditSheet from './components/EditSheet';
 import DetailSheet from './components/DetailSheet';
+import SettingsSheet from './components/SettingsSheet';
 
 export default function App() {
   const [period, setPeriod] = useState('week');
@@ -21,6 +22,8 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
   const [reminderIds, setReminderIds] = useState(new Set());
+  const [reminderDays, setReminderDays] = useState(3);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => { tg()?.ready(); tg()?.expand(); }, []);
 
@@ -28,6 +31,9 @@ export default function App() {
     cloudGet(STORAGE_KEY).then(raw => {
       try { setExpenses(JSON.parse(raw) || []); } catch { setExpenses([]); }
       setReady(true);
+    });
+    cloudGet(SETTINGS_KEY).then(raw => {
+      try { const s = JSON.parse(raw); if (s?.reminderDays) setReminderDays(s.reminderDays); } catch {}
     });
     fetchReminderIds().then(ids => setReminderIds(new Set(ids)));
   }, []);
@@ -44,11 +50,11 @@ export default function App() {
     setExpenses(prev => [...prev, expense]);
     setShowAdd(false);
     if (hasReminder) {
-      toggleReminder(expense, true).then(ok => {
+      toggleReminder(expense, true, reminderDays).then(ok => {
         if (ok) setReminderIds(prev => new Set([...prev, expense.id]));
       });
     }
-  }, []);
+  }, [reminderDays]);
 
   const handleDelete = useCallback(id => {
     setExpenses(prev => prev.filter(e => e.id !== id));
@@ -65,10 +71,10 @@ export default function App() {
       if (hasReminder === wasOn) return prev;
       const next = new Set(prev);
       hasReminder ? next.add(updated.id) : next.delete(updated.id);
-      toggleReminder(updated, hasReminder);
+      toggleReminder(updated, hasReminder, reminderDays);
       return next;
     });
-  }, []);
+  }, [reminderDays]);
 
   const handleToggleReminder = useCallback((entry) => {
     const enabled = !reminderIds.has(entry.id);
@@ -78,7 +84,7 @@ export default function App() {
       enabled ? next.add(entry.id) : next.delete(entry.id);
       return next;
     });
-    toggleReminder(entry, enabled).then(ok => {
+    toggleReminder(entry, enabled, reminderDays).then(ok => {
       if (!ok) {
         setReminderIds(prev => {
           const next = new Set(prev);
@@ -87,7 +93,7 @@ export default function App() {
         });
       }
     });
-  }, [reminderIds]);
+  }, [reminderIds, reminderDays]);
 
   if (!ready) return null;
 
@@ -163,9 +169,12 @@ export default function App() {
             К текущему месяцу
           </button>
         )}
-        <button className="fab" onClick={() => setShowAdd(true)}>
-          + Добавить трату
-        </button>
+        <div className="footer-row">
+          <button className="fab" onClick={() => setShowAdd(true)}>
+            + Добавить трату
+          </button>
+          <button className="btn-settings" onClick={() => setShowSettings(true)}>⚙</button>
+        </div>
       </div>
 
       {showAdd && (
@@ -189,6 +198,19 @@ export default function App() {
           hasReminder={reminderIds.has(editing.id)}
           onEdit={handleEdit}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsSheet
+          reminderDays={reminderDays}
+          onSave={days => {
+            setReminderDays(days);
+            cloudSet(SETTINGS_KEY, JSON.stringify({ reminderDays: days }));
+            saveReminderSettings(days);
+            setShowSettings(false);
+          }}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>

@@ -6,6 +6,16 @@ function initData() {
   return tg()?.initData ?? null;
 }
 
+export async function saveReminderSettings(daysBeforePayment) {
+  const data = initData();
+  if (!data) return;
+  fetch(`${BASE}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData: data, daysBeforePayment }),
+  }).catch(console.error);
+}
+
 export async function fetchReminderIds() {
   const data = initData();
   if (!data) return [];
@@ -21,7 +31,7 @@ export async function fetchReminderIds() {
   }
 }
 
-export async function toggleReminder(expense, enabled) {
+export async function toggleReminder(expense, enabled, daysBeforePayment = 3) {
   const data = initData();
   if (!data) return false;
   const dayOfMonth = parseInt(expense.date.split('-')[2], 10);
@@ -36,6 +46,7 @@ export async function toggleReminder(expense, enabled) {
         amount: expense.amount,
         dayOfMonth,
         enabled,
+        daysBeforePayment,
       }),
     });
     return res.ok;
