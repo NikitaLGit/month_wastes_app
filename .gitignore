@@ -4,3 +4,4 @@ backend/dist/
 .DS_Store
 .claude/
 prompt.md
+psqldb.md

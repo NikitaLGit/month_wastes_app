@@ -7,6 +7,8 @@ import Toggle from './Toggle';
 export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onToggleReminder, onClose }) {
   const sheetRef = useRef(null);
   const cat = entry.category ? getCategoryById(entry.category) : null;
+  const showEndYear = entry.endDate
+    && new Date(entry.endDate.split('-')[0], 0).getFullYear() !== new Date().getFullYear();
 
   useEffect(() => {
     const w = tg();
@@ -53,11 +55,11 @@ export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onTo
             </div>
             <div className="detail-row">
               <span className="detail-row-label">Первый платёж</span>
-              <span className="detail-row-value">{fmtDate(entry.date)}</span>
+              <span className="detail-row-value">{fmtDate(entry.date, true)}</span>
             </div>
             <div className="detail-row">
               <span className="detail-row-label">Последний платёж</span>
-              <span className="detail-row-value">{entry.endDate ? fmtDate(entry.endDate) : 'Бессрочно'}</span>
+              <span className="detail-row-value">{entry.endDate ? fmtDate(entry.endDate, showEndYear) : 'Бессрочно'}</span>
             </div>
             {entry.endDate && (
               <div className="detail-row">

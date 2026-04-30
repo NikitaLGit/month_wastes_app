@@ -29,8 +29,9 @@ export function fmtAmount(n) {
   return new Intl.NumberFormat('ru-RU').format(n);
 }
 
-export function fmtDate(s) {
-  return parseDate(s).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+export function fmtDate(s, withYear = false) {
+  const opts = { day: 'numeric', month: 'long', ...(withYear ? { year: 'numeric' } : {}) };
+  return parseDate(s).toLocaleDateString('ru-RU', opts);
 }
 
 export function daysUntil(s) {
