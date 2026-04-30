@@ -172,7 +172,7 @@ body {
   border-radius: 14px;
   padding: 14px 16px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 14px;
   cursor: pointer;
 }
@@ -210,9 +210,15 @@ body {
 .expense-date.soon { color: #ff9500; }
 .expense-date.today { color: #ff3b30; font-weight: 500; }
 
-.expense-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.expense-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+}
 
-.expense-amount { font-size: 17px; font-weight: 600; }
+.expense-amount { font-size: 19px; font-weight: 600; }
 
 .expense-tag {
   font-size: 11px;
@@ -220,8 +226,16 @@ body {
   margin-top: 3px;
 }
 
-.expense-bell-indicator {
-  font-size: 13px;
+.expense-icons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-height: 18px;
+}
+
+.expense-icon {
+  font-size: 14px;
   line-height: 1;
   opacity: 0.75;
 }

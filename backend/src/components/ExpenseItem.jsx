@@ -21,13 +21,15 @@ export default function ExpenseItem({ entry, onClick, hasReminder }) {
         <div className={'expense-date ' + dateCls(entry.nextDate)}>
           {dateLabel(entry.nextDate)}{daysText}
         </div>
-      </div>
-      <div className="expense-right">
-        <div className="expense-amount">{fmtAmount(entry.amount)} ₽</div>
         {entry.endDate && (
           <div className="expense-tag">↻ {monthsLeft(entry.endDate)} мес.</div>
         )}
-        {hasReminder && <div className="expense-bell-indicator">🔔</div>}
+      </div>
+      <div className="expense-right">
+        <div className="expense-amount">{fmtAmount(entry.amount)} ₽</div>
+        <div className="expense-icons">
+          {hasReminder && <span className="expense-icon">🔔</span>}
+        </div>
       </div>
     </div>
   );

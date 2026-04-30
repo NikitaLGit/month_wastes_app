@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-30 (3)
+
+### Карточка траты
+- **style**: сумма → правый верхний угол, 17px → 19px
+- **style**: 🔔 → правый нижний угол, в `.expense-icons` (flex-row, gap 4px, min-height 18px — зарезервировано место для будущих иконок)
+- **refactor**: `expense-tag` (↻ N мес.) перенесён в левую колонку
+- **style**: `.expense-card` `align-items: center` → `stretch`; `.expense-right` добавлен `justify-content: space-between`
+
 ## 2026-04-30
 
 ### Фильтр и сортировка
