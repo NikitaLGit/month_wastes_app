@@ -13,6 +13,25 @@ import EditSheet from './components/EditSheet';
 import DetailSheet from './components/DetailSheet';
 import SettingsSheet from './components/SettingsSheet';
 
+const THEME_VARS = {
+  dark: {
+    '--tg-theme-bg-color': '#1c1c1e',
+    '--tg-theme-secondary-bg-color': '#2c2c2e',
+    '--tg-theme-text-color': '#ffffff',
+    '--tg-theme-hint-color': '#8e8e93',
+    '--tg-theme-button-color': '#0a84ff',
+    '--tg-theme-button-text-color': '#ffffff',
+  },
+  light: {
+    '--tg-theme-bg-color': '#f2f2f7',
+    '--tg-theme-secondary-bg-color': '#ffffff',
+    '--tg-theme-text-color': '#000000',
+    '--tg-theme-hint-color': '#6c6c70',
+    '--tg-theme-button-color': '#007aff',
+    '--tg-theme-button-text-color': '#ffffff',
+  },
+};
+
 export default function App() {
   const [period, setPeriod] = useState('week');
   const [monthOffset, setMonthOffset] = useState(0);
@@ -25,6 +44,7 @@ export default function App() {
   const [sortBy, setSortBy] = useState('date');
   const [reminderIds, setReminderIds] = useState(new Set());
   const [reminderDays, setReminderDays] = useState(3);
+  const [theme, setTheme] = useState('dark');
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => { tg()?.ready(); tg()?.expand(); }, []);
@@ -35,10 +55,18 @@ export default function App() {
       setReady(true);
     });
     cloudGet(SETTINGS_KEY).then(raw => {
-      try { const s = JSON.parse(raw); if (s?.reminderDays) setReminderDays(s.reminderDays); } catch {}
+      try {
+        const s = JSON.parse(raw);
+        if (s?.reminderDays) setReminderDays(s.reminderDays);
+        if (s?.theme) setTheme(s.theme);
+      } catch {}
     });
     fetchReminderIds().then(ids => setReminderIds(new Set(ids)));
   }, []);
+
+  useEffect(() => {
+    document.body.style.backgroundColor = THEME_VARS[theme]['--tg-theme-bg-color'];
+  }, [theme]);
 
   useEffect(() => {
     if (!ready) return;
@@ -129,7 +157,7 @@ export default function App() {
   });
 
   return (
-    <div className="app-layout">
+    <div className="app-layout" style={THEME_VARS[theme]}>
       <div className="app-header">
         <PeriodSwitcher value={period} onChange={p => { setPeriod(p); if (p === 'week') setMonthOffset(0); }} />
         {period === 'month' && <MonthSwitcher offset={monthOffset} onChange={setMonthOffset} />}
@@ -216,10 +244,12 @@ export default function App() {
       {showSettings && (
         <SettingsSheet
           reminderDays={reminderDays}
-          onSave={days => {
-            setReminderDays(days);
-            cloudSet(SETTINGS_KEY, JSON.stringify({ reminderDays: days }));
-            saveReminderSettings(days);
+          theme={theme}
+          onSave={({ reminderDays: newDays, theme: newTheme }) => {
+            setReminderDays(newDays);
+            setTheme(newTheme);
+            cloudSet(SETTINGS_KEY, JSON.stringify({ reminderDays: newDays, theme: newTheme }));
+            saveReminderSettings(newDays);
             setShowSettings(false);
           }}
           onClose={() => setShowSettings(false)}

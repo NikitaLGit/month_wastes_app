@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { tg } from '../utils/storage';
 
-export default function SettingsSheet({ reminderDays, onSave, onClose }) {
+export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) {
   const [days, setDays] = useState(reminderDays);
+  const [localTheme, setLocalTheme] = useState(theme);
 
   useEffect(() => {
     const w = tg();
@@ -39,8 +40,25 @@ export default function SettingsSheet({ reminderDays, onSave, onClose }) {
                 >+</button>
               </div>
             </div>
+            <div className="detail-row">
+              <span className="detail-row-label">Тема</span>
+              <div className="theme-switcher">
+                <button
+                  className={'theme-btn' + (localTheme === 'dark' ? ' theme-btn--active' : '')}
+                  onClick={() => setLocalTheme('dark')}
+                >Тёмная</button>
+                <button
+                  className={'theme-btn' + (localTheme === 'light' ? ' theme-btn--active' : '')}
+                  onClick={() => setLocalTheme('light')}
+                >Светлая</button>
+              </div>
+            </div>
           </div>
-          <button className="form-submit" style={{ marginTop: 20 }} onClick={() => onSave(days)}>
+          <button
+            className="form-submit"
+            style={{ marginTop: 20 }}
+            onClick={() => onSave({ reminderDays: days, theme: localTheme })}
+          >
             Сохранить
           </button>
         </div>

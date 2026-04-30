@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-30 (4)
+
+### Тема
+- **feat**: переключатель темы в SettingsSheet — `[Тёмная] [Светлая]`, стиль как у PeriodSwitcher
+- **feat**: `THEME_VARS` в App.jsx — инлайн CSS-переменные на `.app-layout` перебивают Telegram SDK без конфликтов
+- **feat**: тема сохраняется в `wastes_settings_v1` вместе с `reminderDays`
+- **feat**: `useEffect` синхронизирует `document.body.style.backgroundColor` при смене темы
+
 ## 2026-04-30 (3)
 
 ### Карточка траты
