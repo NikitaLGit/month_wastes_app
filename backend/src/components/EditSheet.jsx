@@ -100,7 +100,7 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
             <div className="form-label-row">
               <div className="form-label-col">
                 <label className="form-label">Включить напоминание</label>
-                {!hasReminder && <div className="form-hint">По-умолчанию стоит за 3 дня до</div>}
+                <div className="form-hint">По-умолчанию стоит за 3 дня до</div>
               </div>
               <Toggle checked={hasReminder} onChange={setHasReminder} />
             </div>

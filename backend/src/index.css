@@ -727,6 +727,73 @@ body {
 
 .btn-delete:active { opacity: 0.7; }
 
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.confirm-dialog {
+  background: var(--tg-theme-secondary-bg-color, #ffffff);
+  border-radius: 18px;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirm-text {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--tg-theme-text-color, #000000);
+}
+
+.confirm-subtext {
+  font-size: 13px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+  text-align: center;
+  margin-top: -12px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-btn-cancel {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  color: var(--tg-theme-hint-color, #8e8e93);
+  border: 1.5px solid var(--tg-theme-hint-color, #8e8e93);
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.confirm-btn-cancel:active { opacity: 0.7; }
+
+.confirm-btn-ok {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  color: var(--tg-theme-button-color, #007aff);
+  border: 1.5px solid var(--tg-theme-button-color, #007aff);
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.confirm-btn-ok:active { opacity: 0.7; }
+
 .form-field--toggle {
   opacity: 0.45;
   transition: opacity 0.2s;

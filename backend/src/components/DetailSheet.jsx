@@ -1,7 +1,7 @@
 // Шторка просмотра деталей траты.
 // Props: entry, hasReminder (bool), onDelete(id), onEdit(entry),
 //        onToggleReminder(), onClose().
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { fmtAmount, fmtDate, monthsLeft } from '../utils/dates';
 import { tg } from '../utils/storage';
 import { getCategoryById } from '../utils/categories';
@@ -9,6 +9,7 @@ import Toggle from './Toggle';
 
 export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onToggleReminder, onClose }) {
   const sheetRef = useRef(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const cat = entry.category ? getCategoryById(entry.category) : null;
 
   // Год в «Последний платёж» — только если endDate в другом году
@@ -92,8 +93,22 @@ export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onTo
             >
               {hasReminder ? '🔔' : '🔕'}
             </button>
-            <button className="btn-delete" onClick={handleDelete}>Удалить трату</button>
+            <button className="btn-delete" onClick={() => setShowConfirm(true)}>Удалить трату</button>
           </div>
+
+          {/* Модалка подтверждения удаления */}
+          {showConfirm && (
+            <div className="confirm-backdrop" onClick={() => setShowConfirm(false)}>
+              <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                <div className="confirm-text">Удалить трату?</div>
+                <div className="confirm-subtext">«{entry.name}» будет удалена без возможности восстановления</div>
+                <div className="confirm-actions">
+                  <button className="confirm-btn-cancel" onClick={handleDelete}>Удалить</button>
+                  <button className="confirm-btn-ok" onClick={() => setShowConfirm(false)}>Отмена</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
