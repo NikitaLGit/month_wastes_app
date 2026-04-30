@@ -46,7 +46,6 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
     <>
       <div className="overlay" onClick={onClose} />
       <div className="sheet" ref={sheetRef}>
-        <div className="sheet-handle" />
         <div className="sheet-header">
           <div className="sheet-title">Редактировать</div>
           <button className="sheet-close" onClick={onClose}>✕</button>

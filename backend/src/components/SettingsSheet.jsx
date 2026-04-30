@@ -17,7 +17,6 @@ export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) 
     <>
       <div className="overlay" onClick={onClose} />
       <div className="sheet">
-        <div className="sheet-handle" />
         <div className="sheet-header">
           <div className="sheet-title">Настройки</div>
           <button className="sheet-close" onClick={onClose}>✕</button>
@@ -54,9 +53,13 @@ export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) 
               </div>
             </div>
           </div>
+          <p className="settings-footer">
+            2026 lns.{' '}
+            <a href="https://github.com/NikitaLGit/month_wastes_app" target="_blank" rel="noreferrer">github</a>
+          </p>
           <button
             className="form-submit"
-            style={{ marginTop: 20 }}
+            style={{ marginTop: 12 }}
             onClick={() => onSave({ reminderDays: days, theme: localTheme })}
           >
             Сохранить

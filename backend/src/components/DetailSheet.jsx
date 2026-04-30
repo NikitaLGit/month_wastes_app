@@ -28,7 +28,6 @@ export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onTo
     <>
       <div className="overlay" onClick={onClose} />
       <div className="sheet" ref={sheetRef}>
-        <div className="sheet-handle" />
         <div className="sheet-header">
           <div className="sheet-title">{entry.name}</div>
           <button className="sheet-close" onClick={onClose}>✕</button>
