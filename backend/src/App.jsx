@@ -7,6 +7,7 @@ import MonthSwitcher from './components/MonthSwitcher';
 import TotalCard from './components/TotalCard';
 import ExpenseItem from './components/ExpenseItem';
 import CategoryFilter from './components/CategoryFilter';
+import SortPicker from './components/SortPicker';
 import AddSheet from './components/AddSheet';
 import EditSheet from './components/EditSheet';
 import DetailSheet from './components/DetailSheet';
@@ -21,6 +22,7 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
+  const [sortBy, setSortBy] = useState('date');
   const [reminderIds, setReminderIds] = useState(new Set());
   const [reminderDays, setReminderDays] = useState(3);
   const [showSettings, setShowSettings] = useState(false);
@@ -120,6 +122,11 @@ export default function App() {
     ? entries.filter(e => e.category === filterCategory)
     : entries;
   const total = filteredEntries.reduce((s, e) => s + e.amount, 0);
+  const sortedEntries = [...filteredEntries].sort((a, b) => {
+    if (sortBy === 'amount') return b.amount - a.amount;
+    if (sortBy === 'name') return a.name.localeCompare(b.name, 'ru');
+    return a.nextDate.localeCompare(b.nextDate);
+  });
 
   return (
     <div className="app-layout">
@@ -131,19 +138,26 @@ export default function App() {
       <div className="app-content">
         <TotalCard total={total} count={filteredEntries.length} label={totalLabel} />
 
-        {showFilter && (
-          <CategoryFilter
-            active={filterCategory}
-            onChange={setFilterCategory}
-            availableIds={activeCategoryIds}
-          />
+        {entries.length > 0 && (
+          <div className="filter-sort-row">
+            {showFilter && (
+              <div className="filter-pills-wrap">
+                <CategoryFilter
+                  active={filterCategory}
+                  onChange={setFilterCategory}
+                  availableIds={activeCategoryIds}
+                />
+              </div>
+            )}
+            <SortPicker value={sortBy} onChange={setSortBy} />
+          </div>
         )}
 
-        {filteredEntries.length > 0 ? (
+        {sortedEntries.length > 0 ? (
           <>
             <div className="section-title">Предстоящие</div>
             <div className="expense-list">
-              {filteredEntries.map(entry => (
+              {sortedEntries.map(entry => (
                 <ExpenseItem
                   key={entry.id + entry.nextDate}
                   entry={entry}
