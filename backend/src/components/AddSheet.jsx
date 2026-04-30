@@ -53,7 +53,7 @@ export default function AddSheet({ onAdd, onClose }) {
               placeholder="Аренда, кредит, подписка …"
               value={name}
               onChange={e => setName(e.target.value)}
-              autoFocus
+              // autoFocus
             />
           </div>
           <div className="form-field">
@@ -83,26 +83,31 @@ export default function AddSheet({ onAdd, onClose }) {
           </div>
           <div className={'form-field form-field--toggle' + (hasReminder ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
-              <label className="form-label">Включить напоминание</label>
+              <div className="form-label-col">
+                <label className="form-label">Включить напоминание</label>
+                <div className="form-hint">По-умолчанию стоит за 3 дня до</div>
+              </div>
               <Toggle checked={hasReminder} onChange={setHasReminder} />
             </div>
-            <div className="form-hint">По-умолчанию стоит за 3 дня до</div>
           </div>
           <div className={'form-field form-field--toggle' + (hasEnd ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
-              <label className="form-label">Задать число платежей</label>
+              <div className="form-label-col">
+                <label className="form-label">Задать число платежей</label>
+                {!hasEnd && <div className="form-hint">Если не включать трата будет бессрочной</div>}
+              </div>
               <Toggle checked={hasEnd} onChange={setHasEnd} />
             </div>
-            <div className="form-hint">Если не включать трата будет бессрочной</div>
             {hasEnd && (
               <input
                 className="form-input"
+                style={{ marginTop: 12 }}
                 type="text"
                 inputMode="numeric"
                 placeholder="Количество платежей"
                 value={months}
                 onChange={e => setMonths(e.target.value.replace(/\D/g, ''))}
-                autoFocus
+                // autoFocus
               />
             )}
           </div>
