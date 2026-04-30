@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { fmtAmount, fmtDate, monthsLeft } from '../utils/dates';
 import { tg } from '../utils/storage';
 import { getCategoryById } from '../utils/categories';
+import Toggle from './Toggle';
 
 export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onToggleReminder, onClose }) {
   const sheetRef = useRef(null);
@@ -64,18 +65,24 @@ export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onTo
                 <span className="detail-row-value">{monthsLeft(entry.endDate)} мес.</span>
               </div>
             )}
+            {/* <div className="detail-row">
+              <span className="detail-row-label">Включить напоминание</span>
+              <Toggle checked={hasReminder} onChange={onToggleReminder} />
+            </div> */}
           </div>
           <div className="detail-actions">
-            <button
-              className={'btn-bell' + (hasReminder ? ' btn-bell--on' : '')}
-              onClick={onToggleReminder}
-              aria-label="Напоминание"
-            >
-              {hasReminder ? '🔔' : '🔕'}
-            </button>
             <button className="btn-edit" onClick={() => { onEdit(entry); onClose(); }}>Редактировать</button>
           </div>
-          <button className="btn-delete" onClick={handleDelete}>Удалить трату</button>
+          <div className="detail-actions">
+            <button                                                                                                                                                                                                            
+              className={'btn-bell' + (hasReminder ? ' btn-bell--on' : '')}                                                                                                                                                     
+              onClick={onToggleReminder}                                                                                                                                                                                        
+              // aria-label="Напоминание"                                                                                                                                                                                          
+              >                                                                                                                                                                                                                   
+              {hasReminder ? '🔔' : '🔕'}                                                                                                                                                                                       
+            </button>   
+            <button className="btn-delete" onClick={handleDelete}>Удалить трату</button>
+          </div>
         </div>
       </div>
     </>

@@ -77,32 +77,34 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
             />
           </div>
           <div className="form-field">
-            <label className="form-label">Дата первого платежа</label>
+            <label className="form-label">Дата платежа</label>
             <input
               className="form-input"
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
             />
-            <div className="form-hint">Далее списывается в тот же день каждый месяц</div>
+            {/* <div className="form-hint">Далее списывается в тот же день каждый месяц</div> */}
           </div>
           <div className={'form-field form-field--toggle' + (hasReminder ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
-              <label className="form-label">Напоминание за 3 дня</label>
+              <label className="form-label">Включить напоминание</label>
               <Toggle checked={hasReminder} onChange={setHasReminder} />
             </div>
+            <div className="form-hint">По-умолчанию стоит за 3 дня до</div>
           </div>
           <div className={'form-field form-field--toggle' + (hasEnd ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
-              <label className="form-label">Ограниченное число платежей</label>
+              <label className="form-label">Задать число платежей</label>
               <Toggle checked={hasEnd} onChange={setHasEnd} />
             </div>
+            <div className="form-hint">Если не включать трата будет бессрочной</div>
             {hasEnd && (
               <input
                 className="form-input"
                 type="text"
                 inputMode="numeric"
-                placeholder="Количество месяцев"
+                placeholder="Количество платежей"
                 value={months}
                 onChange={e => setMonths(e.target.value.replace(/\D/g, ''))}
               />

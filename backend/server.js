@@ -57,6 +57,10 @@ app.post('/api/reminder', async (req, res) => {
          SET expense_name = $3, amount = $4, day_of_month = $5`,
         [user.id, expenseId, expenseName, amount, dayOfMonth]
       );
+      const days = daysUntilDayOfMonth(dayOfMonth);
+      if (days <= 3) {
+        await sendReminderMessage(user.id, expenseName, amount, days);
+      }
     } else {
       await pool.query(
         'DELETE FROM reminders WHERE user_id = $1 AND expense_id = $2',
@@ -86,6 +90,32 @@ app.get('/api/reminders', async (req, res) => {
   }
 });
 
+function daysUntilDayOfMonth(dayOfMonth) {
+  const now = new Date();
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+  if (thisMonth.getDate() !== dayOfMonth) {
+    // день не существует в этом месяце, берём последний
+    thisMonth.setDate(0);
+  }
+  if (thisMonth <= now) {
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
+    if (next.getDate() !== dayOfMonth) next.setDate(0);
+    return Math.ceil((next - now) / 86400000);
+  }
+  return Math.ceil((thisMonth - now) / 86400000);
+}
+
+async function sendReminderMessage(userId, expenseName, amount, daysLeft) {
+  if (!BOT_TOKEN) return;
+  const label = daysLeft === 0 ? 'сегодня' : daysLeft === 1 ? 'завтра' : `через ${daysLeft} дня`;
+  const text = `🔔 Спишется ${label}: ${expenseName} — ${Number(amount).toLocaleString('ru-RU')} ₽`;
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: userId, text }),
+  }).catch(console.error);
+}
+
 async function sendReminders() {
   if (!pool || !BOT_TOKEN) return;
   const target = new Date();
@@ -97,19 +127,14 @@ async function sendReminders() {
       [targetDay]
     );
     for (const row of rows) {
-      const text = `🔔 Через 3 дня спишется: ${row.expense_name} — ${Number(row.amount).toLocaleString('ru-RU')} ₽`;
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: row.user_id, text }),
-      }).catch(console.error);
+      await sendReminderMessage(row.user_id, row.expense_name, row.amount, 3);
     }
   } catch (err) {
     console.error('Cron error:', err);
   }
 }
 
-cron.schedule('0 9 * * *', sendReminders);
+cron.schedule('0 9 * * *', sendReminders, { timezone: 'Europe/Moscow' });
 
 app.use(express.static(path.join(__dirname, 'dist')));
 

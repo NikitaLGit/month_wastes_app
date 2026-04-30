@@ -1,6 +1,6 @@
 import { tg } from './storage';
 
-const BASE = '/api';
+const BASE = '/wastes/api';
 
 function initData() {
   return tg()?.initData ?? null;
