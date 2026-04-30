@@ -1,3 +1,16 @@
+// Express-сервер + cron. Зависимости: express, pg, node-cron, crypto (встроен в Node).
+// Раздаёт dist/index.html (собранный Vite) как статику.
+//
+// REST API (все пути без /wastes/ — nginx стрипает префикс):
+//   POST /api/reminder    — включить/выключить ремайндер в БД; при включении catch-up уведомление
+//   GET  /api/reminders   — список expense_id активных ремайндеров пользователя
+//   POST /api/settings    — обновить days_before для всех ремайндеров пользователя
+//
+// validateInitData(initData) — HMAC-SHA256 проверка Telegram initData → возвращает объект user или null.
+// initDb() — создаёт таблицу reminders + ALTER ADD COLUMN IF NOT EXISTS days_before (идемпотентно).
+// sendReminders() — cron 9:00 Europe/Moscow: для каждой строки проверяет today+days_before == day_of_month.
+// daysUntilDayOfMonth(day) — сколько дней до ближайшего числа `day` в месяце (учитывает конец месяца).
+
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');

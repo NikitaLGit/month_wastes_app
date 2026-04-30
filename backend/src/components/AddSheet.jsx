@@ -1,3 +1,6 @@
+// Шторка добавления новой траты.
+// Props: onAdd(expense, hasReminder), onClose().
+// После сабмита App добавляет запись в expenses и при hasReminder вызывает toggleReminder.
 import { useState, useRef, useEffect } from 'react';
 import { today, toDateStr, parseDate, genId } from '../utils/dates';
 import { tg } from '../utils/storage';
@@ -6,6 +9,7 @@ import Toggle from './Toggle';
 import CategoryPicker from './CategoryPicker';
 
 export default function AddSheet({ onAdd, onClose }) {
+  // Состояние формы
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(null);
@@ -15,8 +19,10 @@ export default function AddSheet({ onAdd, onClose }) {
   const [months, setMonths] = useState('');
   const sheetRef = useRef(null);
 
+  // Поднимаем шторку над клавиатурой на мобильных
   useKeyboardOffset(sheetRef);
 
+  // Кнопка «Назад» Telegram закрывает шторку
   useEffect(() => {
     const w = tg();
     if (!w) return;
@@ -25,10 +31,12 @@ export default function AddSheet({ onAdd, onClose }) {
     return () => { w.BackButton.hide(); w.BackButton.offClick(onClose); };
   }, [onClose]);
 
+  // Форма валидна если заполнено название, сумма > 0 и (если задан срок) месяцы > 0
   const valid = name.trim() && Number(amount) > 0 && date && (!hasEnd || Number(months) > 0);
 
   const handleSubmit = () => {
     if (!valid) return;
+    // endDate = дата первого платежа + (months - 1) месяцев
     let endDate = null;
     if (hasEnd && Number(months) > 0) {
       const base = parseDate(date);
@@ -46,6 +54,7 @@ export default function AddSheet({ onAdd, onClose }) {
           <button className="sheet-close" onClick={onClose}>✕</button>
         </div>
         <div className="sheet-body">
+          {/* Основные поля */}
           <div className="form-field">
             <label className="form-label">Название</label>
             <input
@@ -53,7 +62,6 @@ export default function AddSheet({ onAdd, onClose }) {
               placeholder="Аренда, кредит, подписка …"
               value={name}
               onChange={e => setName(e.target.value)}
-              // autoFocus
             />
           </div>
           <div className="form-field">
@@ -79,17 +87,20 @@ export default function AddSheet({ onAdd, onClose }) {
               value={date}
               onChange={e => setDate(e.target.value)}
             />
-            {/* <div className="form-hint">Далее списывается в тот же день каждый месяц</div> */}
           </div>
+
+          {/* Тогл напоминания: сноска пропадает при включении */}
           <div className={'form-field form-field--toggle' + (hasReminder ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
               <div className="form-label-col">
                 <label className="form-label">Включить напоминание</label>
-                <div className="form-hint">По-умолчанию стоит за 3 дня до</div>
+                {!hasReminder && <div className="form-hint">По-умолчанию стоит за 3 дня до</div>}
               </div>
               <Toggle checked={hasReminder} onChange={setHasReminder} />
             </div>
           </div>
+
+          {/* Тогл срока: при включении появляется поле ввода числа платежей */}
           <div className={'form-field form-field--toggle' + (hasEnd ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
               <div className="form-label-col">
@@ -107,10 +118,10 @@ export default function AddSheet({ onAdd, onClose }) {
                 placeholder="Количество платежей"
                 value={months}
                 onChange={e => setMonths(e.target.value.replace(/\D/g, ''))}
-                // autoFocus
               />
             )}
           </div>
+
           <button className="form-submit" disabled={!valid} onClick={handleSubmit}>
             Добавить
           </button>

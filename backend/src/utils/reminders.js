@@ -1,3 +1,12 @@
+// API-клиент для напоминаний. Зависимости: storage.js (tg() → initData).
+// Все запросы идут на /wastes/api/* → nginx стрипает /wastes → Express /api/*.
+// Авторизация: initData из Telegram WebApp — сервер проверяет HMAC-SHA256.
+//
+// fetchReminderIds() — GET /reminders — список expense_id с активными ремайндерами.
+// toggleReminder(expense, enabled, days) — POST /reminder — включить/выключить ремайндер;
+//   при включении catch-up: если платёж через ≤ days дней — уведомление сразу.
+// saveReminderSettings(days) — POST /settings — обновляет days_before для всех ремайндеров пользователя.
+
 import { tg } from './storage';
 
 const BASE = '/wastes/api';

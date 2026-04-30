@@ -1,10 +1,16 @@
+// Шторка настроек приложения.
+// Props: reminderDays (число), theme ('dark'|'light'),
+//        onSave({ reminderDays, theme }), onClose().
+// onSave сохраняет в CloudStorage и вызывает saveReminderSettings на бэкенде.
 import { useState, useEffect } from 'react';
 import { tg } from '../utils/storage';
 
 export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) {
+  // Локальное состояние — применяется только при нажатии «Сохранить»
   const [days, setDays] = useState(reminderDays);
   const [localTheme, setLocalTheme] = useState(theme);
 
+  // Кнопка «Назад» Telegram закрывает шторку
   useEffect(() => {
     const w = tg();
     if (!w) return;
@@ -23,6 +29,7 @@ export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) 
         </div>
         <div className="sheet-body">
           <div className="detail-rows">
+            {/* Когда напоминать: степпер 1–14 дней */}
             <div className="detail-row">
               <span className="detail-row-label">Когда напоминать</span>
               <div className="stepper stepper--inline">
@@ -39,6 +46,8 @@ export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) 
                 >+</button>
               </div>
             </div>
+
+            {/* Тема: переключатель Тёмная / Светлая */}
             <div className="detail-row">
               <span className="detail-row-label">Тема</span>
               <div className="theme-switcher">
@@ -53,10 +62,13 @@ export default function SettingsSheet({ reminderDays, theme, onSave, onClose }) 
               </div>
             </div>
           </div>
+
+          {/* Футер со ссылкой на репозиторий */}
           <p className="settings-footer">
             2026 lns.{' '}
             <a href="https://github.com/NikitaLGit/month_wastes_app" target="_blank" rel="noreferrer">github</a>
           </p>
+
           <button
             className="form-submit"
             style={{ marginTop: 12 }}

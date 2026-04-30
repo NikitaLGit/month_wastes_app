@@ -1,3 +1,9 @@
+// Справочник категорий трат. Зависимостей нет.
+// CATEGORIES — массив из 8 категорий с id, русским названием, цветом текста и фоном бейджа.
+// getCategoryById(id) — поиск по id, возвращает объект категории или null.
+// Используется в: CategoryPicker (выбор в форме), CategoryFilter (фильтр списка),
+//   ExpenseItem и DetailSheet (отображение бейджа).
+
 export const CATEGORIES = [
   { id: 'housing',       label: 'Жильё',       color: '#5856d6', bg: 'rgba(88,86,214,0.15)'  },
   { id: 'loans',         label: 'Кредиты',     color: '#ff3b30', bg: 'rgba(255,59,48,0.15)'  },

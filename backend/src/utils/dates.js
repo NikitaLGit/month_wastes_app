@@ -1,3 +1,11 @@
+// Утилиты для работы с датами. Зависимостей нет — чистая математика.
+// parseDate / toDateStr — конвертация строк YYYY-MM-DD ↔ Date без UTC-смещения.
+// getEntries(expenses, from, to) — главная функция: разворачивает ежемесячные траты
+//   в список конкретных дат внутри диапазона [from, to]; возвращает массив с полем nextDate.
+// fmtDate(s, withYear?) — локализованный вывод даты (ru-RU), год опционален.
+// daysUntil / dateLabel / dateCls — для карточек: сколько дней осталось, текст и CSS-класс.
+// monthsLeft(endDateStr) — сколько месяцев осталось до конца подписки.
+
 export function parseDate(s) {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);

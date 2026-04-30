@@ -1,3 +1,6 @@
+// Шторка редактирования существующей траты.
+// Props: expense (объект), hasReminder (bool), onEdit(updated, hasReminder), onClose().
+// При сабмите App обновляет запись и синхронизирует состояние ремайндера.
 import { useState, useRef, useEffect } from 'react';
 import { parseDate, toDateStr } from '../utils/dates';
 import { tg } from '../utils/storage';
@@ -6,12 +9,15 @@ import Toggle from './Toggle';
 import CategoryPicker from './CategoryPicker';
 
 export default function EditSheet({ expense, hasReminder: initialReminder, onEdit, onClose }) {
+  // Состояние формы инициализируется из переданного expense
   const [name, setName] = useState(expense.name);
   const [amount, setAmount] = useState(String(expense.amount));
   const [category, setCategory] = useState(expense.category ?? null);
   const [date, setDate] = useState(expense.date);
   const [hasReminder, setHasReminder] = useState(initialReminder);
   const [hasEnd, setHasEnd] = useState(!!expense.endDate);
+
+  // Вычисляем число месяцев из разницы дат (первый + последний включительно)
   const [months, setMonths] = useState(() => {
     if (!expense.endDate) return '';
     const s = parseDate(expense.date);
@@ -20,8 +26,10 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
   });
   const sheetRef = useRef(null);
 
+  // Поднимаем шторку над клавиатурой на мобильных
   useKeyboardOffset(sheetRef);
 
+  // Кнопка «Назад» Telegram закрывает шторку
   useEffect(() => {
     const w = tg();
     if (!w) return;
@@ -34,6 +42,7 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
 
   const handleSubmit = () => {
     if (!valid) return;
+    // endDate = дата первого платежа + (months - 1) месяцев
     let endDate = null;
     if (hasEnd && Number(months) > 0) {
       const base = parseDate(date);
@@ -51,6 +60,7 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
           <button className="sheet-close" onClick={onClose}>✕</button>
         </div>
         <div className="sheet-body">
+          {/* Основные поля */}
           <div className="form-field">
             <label className="form-label">Название</label>
             <input
@@ -83,17 +93,20 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
               value={date}
               onChange={e => setDate(e.target.value)}
             />
-            {/* <div className="form-hint">Далее списывается в тот же день каждый месяц</div> */}
           </div>
+
+          {/* Тогл напоминания: сноска пропадает при включении */}
           <div className={'form-field form-field--toggle' + (hasReminder ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
               <div className="form-label-col">
                 <label className="form-label">Включить напоминание</label>
-                <div className="form-hint">По-умолчанию стоит за 3 дня до</div>
+                {!hasReminder && <div className="form-hint">По-умолчанию стоит за 3 дня до</div>}
               </div>
               <Toggle checked={hasReminder} onChange={setHasReminder} />
             </div>
           </div>
+
+          {/* Тогл срока: при включении появляется поле ввода числа платежей */}
           <div className={'form-field form-field--toggle' + (hasEnd ? ' form-field--toggle-on' : '')}>
             <div className="form-label-row">
               <div className="form-label-col">
@@ -114,6 +127,7 @@ export default function EditSheet({ expense, hasReminder: initialReminder, onEdi
               />
             )}
           </div>
+
           <button className="form-submit" disabled={!valid} onClick={handleSubmit}>
             Сохранить
           </button>
