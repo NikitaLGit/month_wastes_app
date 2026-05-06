@@ -7,6 +7,7 @@
 
 export const STORAGE_KEY = 'wastes_v1';
 export const SETTINGS_KEY = 'wastes_settings_v1';
+export const REMINDER_IDS_KEY = 'wastes_reminder_ids_v1';
 
 export const tg = () => window.Telegram?.WebApp;
 

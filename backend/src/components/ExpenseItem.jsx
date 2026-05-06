@@ -2,7 +2,7 @@
 // Props: entry (объект с nextDate, name, amount, category, endDate),
 //        onClick(entry) — открывает DetailSheet,
 //        hasReminder (bool) — показывает 🔔.
-import { daysUntil, dateCls, dateLabel, fmtAmount, monthsLeft } from '../utils/dates';
+import { daysUntil, dateCls, dateLabel, fmtAmount, paymentsLeft } from '../utils/dates';
 import { getCategoryById } from '../utils/categories';
 
 export default function ExpenseItem({ entry, onClick, hasReminder }) {
@@ -33,7 +33,7 @@ export default function ExpenseItem({ entry, onClick, hasReminder }) {
       <div className="expense-right">
         <div className="expense-amount">{fmtAmount(entry.amount)} ₽</div>
         {entry.endDate && (
-          <div className="expense-tag">↻ {monthsLeft(entry.endDate)} мес.</div>
+          <div className="expense-tag">↻ {paymentsLeft(entry.nextDate, entry.endDate)} мес.</div>
         )}
         <div className="expense-icons">
           {hasReminder && <span className="expense-icon">🔔</span>}

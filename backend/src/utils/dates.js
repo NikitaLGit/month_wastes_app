@@ -4,7 +4,7 @@
 //   в список конкретных дат внутри диапазона [from, to]; возвращает массив с полем nextDate.
 // fmtDate(s, withYear?) — локализованный вывод даты (ru-RU), год опционален.
 // daysUntil / dateLabel / dateCls — для карточек: сколько дней осталось, текст и CSS-класс.
-// monthsLeft(endDateStr) — сколько месяцев осталось до конца подписки.
+// paymentsLeft(nextDateStr, endDateStr) — сколько платежей осталось включительно.
 
 export function parseDate(s) {
   const [y, m, d] = s.split('-').map(Number);
@@ -60,10 +60,12 @@ export function dateCls(s) {
   return '';
 }
 
-export function monthsLeft(endDateStr) {
+// Counts remaining payments from nextDate to endDate inclusive.
+// Decrements only when the payment date itself passes, not on calendar month change.
+export function paymentsLeft(nextDateStr, endDateStr) {
+  const next = parseDate(nextDateStr);
   const end = parseDate(endDateStr);
-  const now = today();
-  return Math.max(0, (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth()));
+  return Math.max(0, (end.getFullYear() - next.getFullYear()) * 12 + (end.getMonth() - next.getMonth()) + 1);
 }
 
 export function genId() {

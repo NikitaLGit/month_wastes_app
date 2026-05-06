@@ -19,6 +19,11 @@ const cron = require('node-cron');
 
 const app = express();
 app.use(express.json());
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => console.log(req.method, req.path, res.statusCode, `${Date.now()-start}ms`));
+  next();
+});
 
 const PORT = process.env.PORT || 3003;
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -58,6 +63,14 @@ function validateInitData(initData) {
   try { return JSON.parse(params.get('user')); } catch { return null; }
 }
 
+app.post('/api/test-cron', async (req, res) => {
+  if (!pool || !BOT_TOKEN) return res.status(503).json({ error: 'not configured' });
+  const { secret } = req.body;
+  if (secret !== 'wastes-debug-2026') return res.status(403).json({ error: 'forbidden' });
+  await sendReminders();
+  res.json({ ok: true, message: 'cron triggered manually' });
+});
+
 app.post('/api/reminder', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'DB not configured' });
   const { initData, expenseId, expenseName, amount, dayOfMonth, enabled, daysBeforePayment = 3 } = req.body;
@@ -74,7 +87,7 @@ app.post('/api/reminder', async (req, res) => {
       );
       const days = daysUntilDayOfMonth(dayOfMonth);
       if (days <= daysBeforePayment) {
-        await sendReminderMessage(user.id, expenseName, amount, days);
+        await sendReminderMessage(user.id, days, [{ name: expenseName, amount }]);
       }
     } else {
       await pool.query(
@@ -108,7 +121,8 @@ app.post('/api/settings', async (req, res) => {
 
 app.get('/api/reminders', async (req, res) => {
   if (!pool) return res.json({ ids: [] });
-  const user = validateInitData(req.headers['x-init-data']);
+  const raw = req.headers['x-init-data'];
+  const user = validateInitData(raw);
   if (!user) return res.status(403).json({ error: 'Invalid initData' });
   try {
     const { rows } = await pool.query(
@@ -137,10 +151,17 @@ function daysUntilDayOfMonth(dayOfMonth) {
   return Math.ceil((thisMonth - now) / 86400000);
 }
 
-async function sendReminderMessage(userId, expenseName, amount, daysLeft) {
+function formatReminderText(daysLeft, items) {
+  const label = daysLeft === 0 ? 'Сегодня' : daysLeft === 1 ? 'Завтра' : `Через ${daysLeft} дня`;
+  const list = items.map(({ name, amount }) =>
+    `• ${name} — ${Number(amount).toLocaleString('ru-RU')} ₽`
+  ).join('\n');
+  return `🔔 Спишется ${label}:\n${list}`;
+}
+
+async function sendReminderMessage(userId, daysLeft, items) {
   if (!BOT_TOKEN) return;
-  const label = daysLeft === 0 ? 'сегодня' : daysLeft === 1 ? 'завтра' : `через ${daysLeft} дня`;
-  const text = `🔔 Спишется ${label}: ${expenseName} — ${Number(amount).toLocaleString('ru-RU')} ₽`;
+  const text = formatReminderText(daysLeft, items);
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -153,12 +174,19 @@ async function sendReminders() {
   const today = new Date();
   try {
     const { rows } = await pool.query('SELECT * FROM reminders');
+    // group matching rows by user_id + daysLeft
+    const groups = new Map();
     for (const row of rows) {
       const target = new Date(today);
       target.setDate(today.getDate() + row.days_before);
       if (target.getDate() === row.day_of_month) {
-        await sendReminderMessage(row.user_id, row.expense_name, row.amount, row.days_before);
+        const key = `${row.user_id}:${row.days_before}`;
+        if (!groups.has(key)) groups.set(key, { userId: row.user_id, daysLeft: row.days_before, items: [] });
+        groups.get(key).items.push({ name: row.expense_name, amount: row.amount });
       }
+    }
+    for (const { userId, daysLeft, items } of groups.values()) {
+      await sendReminderMessage(userId, daysLeft, items);
     }
   } catch (err) {
     console.error('Cron error:', err);
@@ -167,7 +195,13 @@ async function sendReminders() {
 
 cron.schedule('0 9 * * *', sendReminders, { timezone: 'Europe/Moscow' });
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'dist'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store');
+    }
+  },
+}));
 
 initDb().then(() => {
   app.listen(PORT, () => console.log(`Listening on :${PORT}`));

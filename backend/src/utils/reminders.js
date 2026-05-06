@@ -25,18 +25,19 @@ export async function saveReminderSettings(daysBeforePayment) {
   }).catch(console.error);
 }
 
+// Returns array of ids on success, null on failure (network/auth error).
 export async function fetchReminderIds() {
   const data = initData();
-  if (!data) return [];
+  if (!data) return null;
   try {
     const res = await fetch(`${BASE}/reminders`, {
       headers: { 'x-init-data': data },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const json = await res.json();
     return json.ids ?? [];
   } catch {
-    return [];
+    return null;
   }
 }
 

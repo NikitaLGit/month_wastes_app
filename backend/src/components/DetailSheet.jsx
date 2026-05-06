@@ -2,7 +2,7 @@
 // Props: entry, hasReminder (bool), onDelete(id), onEdit(entry),
 //        onToggleReminder(), onClose().
 import { useRef, useEffect, useState } from 'react';
-import { fmtAmount, fmtDate, monthsLeft } from '../utils/dates';
+import { fmtAmount, fmtDate, paymentsLeft } from '../utils/dates';
 import { tg } from '../utils/storage';
 import { getCategoryById } from '../utils/categories';
 import Toggle from './Toggle';
@@ -75,7 +75,7 @@ export default function DetailSheet({ entry, hasReminder, onDelete, onEdit, onTo
             {entry.endDate && (
               <div className="detail-row">
                 <span className="detail-row-label">Осталось платежей</span>
-                <span className="detail-row-value">{monthsLeft(entry.endDate)} мес.</span>
+                <span className="detail-row-value">{paymentsLeft(entry.nextDate, entry.endDate)} мес.</span>
               </div>
             )}
           </div>

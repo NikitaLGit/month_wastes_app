@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { today, addDays, endOfMonth, getEntries, capitalize } from './utils/dates';
-import { tg, cloudGet, cloudSet, STORAGE_KEY, SETTINGS_KEY } from './utils/storage';
+import { tg, cloudGet, cloudSet, STORAGE_KEY, SETTINGS_KEY, REMINDER_IDS_KEY } from './utils/storage';
 import { fetchReminderIds, toggleReminder, saveReminderSettings } from './utils/reminders';
 import PeriodSwitcher from './components/PeriodSwitcher';
 import MonthSwitcher from './components/MonthSwitcher';
@@ -61,7 +61,18 @@ export default function App() {
         if (s?.theme) setTheme(s.theme);
       } catch {}
     });
-    fetchReminderIds().then(ids => setReminderIds(new Set(ids)));
+    cloudGet(REMINDER_IDS_KEY).then(raw => {
+      try {
+        const cached = JSON.parse(raw);
+        if (Array.isArray(cached)) setReminderIds(new Set(cached));
+      } catch {}
+      return fetchReminderIds();
+    }).then(ids => {
+      if (ids !== null) {
+        setReminderIds(new Set(ids));
+        cloudSet(REMINDER_IDS_KEY, JSON.stringify(ids));
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -81,7 +92,13 @@ export default function App() {
     setShowAdd(false);
     if (hasReminder) {
       toggleReminder(expense, true, reminderDays).then(ok => {
-        if (ok) setReminderIds(prev => new Set([...prev, expense.id]));
+        if (ok) {
+          setReminderIds(prev => {
+            const next = new Set([...prev, expense.id]);
+            cloudSet(REMINDER_IDS_KEY, JSON.stringify([...next]));
+            return next;
+          });
+        }
       });
     }
   }, [reminderDays]);
@@ -89,7 +106,12 @@ export default function App() {
   const handleDelete = useCallback(id => {
     setExpenses(prev => prev.filter(e => e.id !== id));
     toggleReminder({ id }, false);
-    setReminderIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+    setReminderIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      cloudSet(REMINDER_IDS_KEY, JSON.stringify([...next]));
+      return next;
+    });
   }, []);
 
   const handleEdit = useCallback((updated, hasReminder) => {
@@ -102,6 +124,7 @@ export default function App() {
       const next = new Set(prev);
       hasReminder ? next.add(updated.id) : next.delete(updated.id);
       toggleReminder(updated, hasReminder, reminderDays);
+      cloudSet(REMINDER_IDS_KEY, JSON.stringify([...next]));
       return next;
     });
   }, [reminderDays]);
@@ -112,6 +135,7 @@ export default function App() {
     setReminderIds(prev => {
       const next = new Set(prev);
       enabled ? next.add(entry.id) : next.delete(entry.id);
+      cloudSet(REMINDER_IDS_KEY, JSON.stringify([...next]));
       return next;
     });
     toggleReminder(entry, enabled, reminderDays).then(ok => {
@@ -119,6 +143,7 @@ export default function App() {
         setReminderIds(prev => {
           const next = new Set(prev);
           enabled ? next.delete(entry.id) : next.add(entry.id);
+          cloudSet(REMINDER_IDS_KEY, JSON.stringify([...next]));
           return next;
         });
       }
