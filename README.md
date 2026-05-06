@@ -140,6 +140,35 @@ vite-plugin-singlefile инлайнит всё в один `dist/index.html`. ng
 
 ---
 
+## Настройка nginx
+
+**Важно:** при использовании переменной в `proxy_pass` nginx не стрипает location prefix автоматически. Необходим явный `rewrite`.
+
+**Неправильно** — запросы `/wastes/api/*` приходят в Express как `POST /`:
+```nginx
+location /wastes/ {
+    set $upstream http://month-wastes-backend:3003;
+    proxy_pass $upstream/;  # ❌ путь не стрипается при переменной
+}
+```
+
+**Правильно:**
+```nginx
+location /wastes/ {
+    set $upstream http://month-wastes-backend:3003;
+    rewrite ^/wastes/(.*)$ /$1 break;   # стрипаем /wastes/
+    proxy_pass $upstream;                # без слеша
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+`set $upstream` нужен для динамического резолвинга DNS (Docker embedded DNS `127.0.0.11`) — чтобы nginx стартовал даже если контейнер бэкенда ещё не поднят.
+
+---
+
 ## Переменные окружения
 
 | Переменная | Описание |
