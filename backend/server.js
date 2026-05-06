@@ -85,10 +85,6 @@ app.post('/api/reminder', async (req, res) => {
          SET expense_name = $3, amount = $4, day_of_month = $5, days_before = $6`,
         [user.id, expenseId, expenseName, amount, dayOfMonth, daysBeforePayment]
       );
-      const days = daysUntilDayOfMonth(dayOfMonth);
-      if (days <= daysBeforePayment) {
-        await sendReminderMessage(user.id, days, [{ name: expenseName, amount }]);
-      }
     } else {
       await pool.query(
         'DELETE FROM reminders WHERE user_id = $1 AND expense_id = $2',
@@ -136,20 +132,6 @@ app.get('/api/reminders', async (req, res) => {
   }
 });
 
-function daysUntilDayOfMonth(dayOfMonth) {
-  const now = new Date();
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-  if (thisMonth.getDate() !== dayOfMonth) {
-    // день не существует в этом месяце, берём последний
-    thisMonth.setDate(0);
-  }
-  if (thisMonth <= now) {
-    const next = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
-    if (next.getDate() !== dayOfMonth) next.setDate(0);
-    return Math.ceil((next - now) / 86400000);
-  }
-  return Math.ceil((thisMonth - now) / 86400000);
-}
 
 function formatReminderText(daysLeft, items) {
   const label = daysLeft === 0 ? 'Сегодня' : daysLeft === 1 ? 'Завтра' : `Через ${daysLeft} дня`;

@@ -44,7 +44,7 @@ export async function fetchReminderIds() {
 export async function toggleReminder(expense, enabled, daysBeforePayment = 3) {
   const data = initData();
   if (!data) return false;
-  const dayOfMonth = parseInt(expense.date.split('-')[2], 10);
+  const dayOfMonth = enabled ? parseInt(expense.date.split('-')[2], 10) : 0;
   try {
     const res = await fetch(`${BASE}/reminder`, {
       method: 'POST',
@@ -52,8 +52,8 @@ export async function toggleReminder(expense, enabled, daysBeforePayment = 3) {
       body: JSON.stringify({
         initData: data,
         expenseId: expense.id,
-        expenseName: expense.name,
-        amount: expense.amount,
+        expenseName: expense.name ?? '',
+        amount: expense.amount ?? 0,
         dayOfMonth,
         enabled,
         daysBeforePayment,
